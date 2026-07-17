@@ -1,1 +1,1 @@
-# FluidSim_Lattice-Boltzman
+# FluidSimulation with Lattice-Boltzman-Method
