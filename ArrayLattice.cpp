@@ -12,6 +12,7 @@ public:
   // 9D Vector containing 2D fields. In these the
   std::vector<std::vector<std::vector<datatype>>> grid_;
   std::vector<std::pair<int, int>> directionVector_;
+  std::vector<std::pair<int, int>> fanPositions_;
   std::vector<datatype> weights_;
   std::vector<std::vector<datatype>> density_;
   std::pair<datatype, datatype> u_;
@@ -29,6 +30,9 @@ public:
                                          r, std::vector<datatype>(c, 0.0))),
         directionVector_{{0, 0}, {1, 0},  {0, 1},   {-1, 0}, {0, -1},
                          {1, 1}, {-1, 1}, {-1, -1}, {1, -1}},
+
+        fanPositions_{{10, 10}, {10, 11}, {10, 12}, {10, 13}, {10, 14},
+                      {10, 15}, {10, 16}, {10, 17}, {10, 18}, {10, 19}},
         density_(r, std::vector<datatype>(c, 0.0)),
         weights_{4.0 / 9.0,  1.0 / 9.0,  1.0 / 9.0,  1.0 / 9.0, 1.0 / 9.0,
                  1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0} {}
@@ -117,7 +121,7 @@ public:
   }
 
   //
-  void collision(datatype omega = 1) {
+  void collision(datatype omega = 1, datatype fan_speed = 1) {
     // density is a 2D grid of size of the grid_
     // Add all values of f(x) to
     density_ = grid_[0];
@@ -140,15 +144,21 @@ public:
           continue;
         }
 
-        u_x = 0;
-        u_y = 0;
-        for (int f = 0; f < 9; f++) {
-          f_i = grid_[f][row][col];
-          u_x += directionVector_[f].first * f_i;
-          u_y += directionVector_[f].second * f_i;
+        // If it is Ventilator
+        if (is_fan(row, col)) {
+          u_.first = 0;
+          u_.second = fan_speed;
+        } else {
+          u_x = 0;
+          u_y = 0;
+          for (int f = 0; f < 9; f++) {
+            f_i = grid_[f][row][col];
+            u_x += directionVector_[f].first * f_i;
+            u_y += directionVector_[f].second * f_i;
+          }
+          u_.first = u_x / density_[row][col];
+          u_.second = u_y / density_[row][col];
         }
-        u_.first = u_x / density_[row][col];
-        u_.second = u_y / density_[row][col];
 
         // Set every f_i to f*
         for (int f = 0; f < 9; f++) {
@@ -157,10 +167,12 @@ public:
 
           // d_u = (directionvec bzw c) * u
           //  f = w * p * (1+ 3 d_u + 9/2 d_u **2 -3/2 u**2)
+          f_i = grid_[f][row][col];
           grid_[f][row][col] =
-              weights_[f] * density_[row][col] *
-              (1 + 3 * (d_u) + 4.5 * (d_u * d_u) -
-               1.5 * (u_.first * u_.first + u_.second * u_.second));
+              f_i - omega * (f_i - weights_[f] * density_[row][col] *
+                                       (1 + 3 * (d_u) + 4.5 * (d_u * d_u) -
+                                        1.5 * (u_.first * u_.first +
+                                               u_.second * u_.second)));
         }
       }
     }
@@ -204,7 +216,15 @@ public:
     return density;
   }
 
-  void OpenGL_Density() { return; }
+  // Returns true if Position is a Fan
+  bool is_fan(int row, int col) {
+    for (int i = 0; i < fanPositions_.size(); i++) {
+      if (row == fanPositions_[i].first and col == fanPositions_[i].second) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   // Returns steps needed to return to initial State. The State is one Point
   // filled with 1.0

@@ -5,21 +5,22 @@
 
 int main() {
   datatype e = 0.1;
-  constexpr int N = 1000;
+  constexpr int N = 100;
   constexpr int ROWS = N;
   constexpr int COLS = N;
   constexpr int CELL_SIZE = 10;
+  datatype Omega = 1;
+  datatype Fan_Speed = 1;
   SimGrid simGrid = SimGrid(N, N);
   simGrid.set_all_to_standard();
-  std::vector<datatype> vec1 = {4.0 / 9.0,       1.0f / 9.0f + e, 1.0 / 9.0,
-                                1.0f / 9.0f - e, 1.0 / 9.0,       1.0 / 36.0,
+  std::vector<datatype> vec1 = {4.0 / 9.0,       1.0f / 9.0f, 1.0 / 9.0,
+                                1.0f / 9.0f, 1.0 / 9.0,       1.0 / 36.0,
                                 1.0 / 36.0,      1.0 / 36.0,      1.0 / 36.0};
   simGrid.set_point(1, 1, vec1);
   datatype avgstream = 0;
   datatype avgcollison = 0;
 
   const int count_runs = 100;
-  
 
   sf::RenderWindow window(sf::VideoMode(COLS * CELL_SIZE, ROWS * CELL_SIZE),
                           "Grid");
@@ -28,7 +29,7 @@ int main() {
   while (window.isOpen() and t < count_runs) {
     // simGrid.print_density();
     auto start_col = std::chrono::high_resolution_clock::now();
-    simGrid.collision();
+    simGrid.collision(Omega,Fan_Speed);
     auto end_col = std::chrono::high_resolution_clock::now();
     std::chrono::duration<datatype, std::micro> duration = end_col - start_col;
     avgcollison += duration.count();
@@ -84,7 +85,7 @@ int main() {
     }
 
     window.display();
-    sf::sleep(sf::seconds(1));
+    sf::sleep(sf::seconds(0.5));
     t++;
   }
   avgstream = avgstream / count_runs;
