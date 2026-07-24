@@ -5,11 +5,11 @@
 
 int main() {
   datatype e = 0.1;
-  constexpr int N = 100;
+  constexpr int N = 500;
   constexpr int ROWS = N;
   constexpr int COLS = N;
-  datatype Omega = 0.8;
-  datatype Fan_Speed = 1;
+  datatype Omega = 1.9;
+  datatype Fan_Speed = 0.2;
   SimGrid simGrid = SimGrid(N, N);
   simGrid.set_all_to_standard();
   std::vector<datatype> vec1 = {4.0 / 9.0,   1.0f / 9.0f, 1.0 / 9.0,
@@ -19,7 +19,7 @@ int main() {
   datatype avgstream = 0;
   datatype avgcollison = 0;
 
-  const int count_runs = 100;
+  const int count_runs = 1000;
 
   constexpr int WINDOW_WIDTH = 1920;
   constexpr int WINDOW_HEIGHT = 1080;
@@ -86,7 +86,7 @@ int main() {
         pixels[index + 0] = r;
         pixels[index + 1] = g;
         pixels[index + 2] = b;
-        pixels[index + 3] = 255;
+        pixels[index + 3] = 250;
       }
     }
     texture.update(pixels.data());

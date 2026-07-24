@@ -11,6 +11,7 @@ class SimGrid {
 public:
   // 9D Vector containing 2D fields. In these the
   std::vector<std::vector<std::vector<datatype>>> grid_;
+  std::vector<std::vector<std::vector<datatype>>> grid_T_;
   std::vector<std::pair<int, int>> directionVector_;
   std::vector<std::pair<int, int>> fanPositions_;
   std::vector<datatype> weights_;
@@ -28,6 +29,7 @@ public:
   SimGrid(size_t r, size_t c)
       : rows_(r), cols_(c), grid_(9, std::vector<std::vector<datatype>>(
                                          r, std::vector<datatype>(c, 0.0))),
+        grid_T_(9, std::vector<std::vector<datatype>>(r, std::vector<datatype>(c, 0.0))),
         directionVector_{{0, 0}, {1, 0},  {0, 1},   {-1, 0}, {0, -1},
                          {1, 1}, {-1, 1}, {-1, -1}, {1, -1}},
 
@@ -72,44 +74,44 @@ public:
     }
   }
   // Shifts all rows down or up based on the index. Positive is up.
-  void shift_Y(int shift, size_t function) {
+  void shift_Y(int shift, size_t function, std::vector<std::vector<std::vector<datatype>>> &grid) {
     if (shift == 0) {
       return;
     }
     if (shift < 0) {
-      std::rotate(grid_[function].begin(), grid_[function].end() + shift,
-                  grid_[function].end());
+      std::rotate(grid[function].begin(), grid[function].end() + shift,
+                  grid[function].end());
     } else {
-      std::rotate(grid_[function].begin(), grid_[function].begin() + shift,
-                  grid_[function].end());
+      std::rotate(grid[function].begin(), grid[function].begin() + shift,
+                  grid[function].end());
     }
   }
 
   // Shifts all Cols to the right or left by the amount of the Index. Positive
   // is
-  void shift_X(int shift, size_t function) {
+  void shift_X(int shift, size_t function,std::vector<std::vector<std::vector<datatype>>> &grid) {
     if (shift == 0) {
       return;
     }
     if (shift < 0) {
       for (int row = 0; row < rows_; row++) {
-        std::rotate(grid_[function][row].begin(),
-                    grid_[function][row].begin() - shift,
-                    grid_[function][row].end());
+        std::rotate(grid[function][row].begin(),
+                    grid[function][row].begin() - shift,
+                    grid[function][row].end());
       }
     } else {
       for (int row = 0; row < rows_; row++) {
-        std::rotate(grid_[function][row].begin(),
-                    grid_[function][row].end() - shift,
-                    grid_[function][row].end());
+        std::rotate(grid[function][row].begin(),
+                    grid[function][row].end() - shift,
+                    grid[function][row].end());
       }
     }
   }
 
   // Combined Shift
   void shift(int x_shift, int y_shift, size_t function) {
-    shift_X(x_shift, function);
-    shift_Y(y_shift, function);
+    shift_X(x_shift, function, grid_);
+    shift_Y(y_shift, function, grid_);
   }
 
   // Finishes Stream Stage.
@@ -145,7 +147,7 @@ public:
         }
 
         // If it is Ventilator
-        if (is_fan(row, col)) {
+        if (is_fan_proportional(row, col)) {
           u_.first = 0;
           u_.second = fan_speed;
         } else {
@@ -226,6 +228,17 @@ public:
     return false;
   }
 
+  bool is_fan_proportional(int row, int col){
+    int mincols = cols_ * 0.20;
+    int maxcols = cols_ * 0.25;
+    int correct_row = rows_ * 0.15;
+
+    if ( row == correct_row and col > mincols and col < maxcols){
+      return true;  
+    }
+    return false;
+  }
+
   // Returns steps needed to return to initial State. The State is one Point
   // filled with 1.0
   int run_cycle() {
@@ -252,4 +265,14 @@ public:
               << " is " << dt - timeatStart << ".\n";
     return dt - timeatStart;
   }
+
+
+  void stream_with_bc(){
+    
+  }
+
+
+
+
+  
 };
