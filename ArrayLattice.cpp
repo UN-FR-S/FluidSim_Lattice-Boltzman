@@ -12,10 +12,13 @@ public:
   // 9D Vector containing 2D fields. In these the
   std::vector<std::vector<std::vector<datatype>>> grid_;
   std::vector<std::vector<std::vector<datatype>>> grid_T_;
+  std::vector<std::vector<std::vector<datatype>>> grid_C02_;
   std::vector<std::pair<int, int>> directionVector_;
   std::vector<std::pair<int, int>> fanPositions_;
   std::vector<datatype> weights_;
   std::vector<std::vector<datatype>> density_;
+  std::vector<std::vector<datatype>> T_density;
+  std::vector<std::vector<datatype>> C02_density;
   std::pair<datatype, datatype> u_;
   size_t rows_;
   size_t cols_;
@@ -29,7 +32,8 @@ public:
   SimGrid(size_t r, size_t c)
       : rows_(r), cols_(c), grid_(9, std::vector<std::vector<datatype>>(
                                          r, std::vector<datatype>(c, 0.0))),
-        grid_T_(9, std::vector<std::vector<datatype>>(r, std::vector<datatype>(c, 0.0))),
+        grid_T_(9, std::vector<std::vector<datatype>>(
+                       r, std::vector<datatype>(c, 0.0))),
         directionVector_{{0, 0}, {1, 0},  {0, 1},   {-1, 0}, {0, -1},
                          {1, 1}, {-1, 1}, {-1, -1}, {1, -1}},
 
@@ -69,12 +73,14 @@ public:
       for (int row = 0; row < rows_; row++) {
         for (int col = 0; col < cols_; col++) {
           grid_.at(func).at(row).at(col) = val;
+          grid_T_.at(func).at(row).at(col) = val;
         }
       }
     }
   }
   // Shifts all rows down or up based on the index. Positive is up.
-  void shift_Y(int shift, size_t function, std::vector<std::vector<std::vector<datatype>>> &grid) {
+  void shift_Y(int shift, size_t function,
+               std::vector<std::vector<std::vector<datatype>>> &grid) {
     if (shift == 0) {
       return;
     }
@@ -89,7 +95,8 @@ public:
 
   // Shifts all Cols to the right or left by the amount of the Index. Positive
   // is
-  void shift_X(int shift, size_t function,std::vector<std::vector<std::vector<datatype>>> &grid) {
+  void shift_X(int shift, size_t function,
+               std::vector<std::vector<std::vector<datatype>>> &grid) {
     if (shift == 0) {
       return;
     }
@@ -228,13 +235,13 @@ public:
     return false;
   }
 
-  bool is_fan_proportional(int row, int col){
+  bool is_fan_proportional(int row, int col) {
     int mincols = cols_ * 0.20;
     int maxcols = cols_ * 0.25;
     int correct_row = rows_ * 0.15;
 
-    if ( row == correct_row and col > mincols and col < maxcols){
-      return true;  
+    if (row == correct_row and col > mincols and col < maxcols) {
+      return true;
     }
     return false;
   }
@@ -266,13 +273,35 @@ public:
     return dt - timeatStart;
   }
 
+  void stream_with_bc() {}
 
-  void stream_with_bc(){
-    
+  void collision_T(double omega_T = 1.0) {
+    T_density = grid_T_[0];
+    double T_density = 0;
+    double u_ges = 0;
+    for (int row = 0; row < rows_; row++) {
+      for (int col = 0; col < cols_; col++) {
+        T_density = 0;
+        u_.first = 0;
+        u_.second = 0;
+
+        for (int i = 0; i < 9; i++) {
+          T_density += grid_T_[row][col][i];
+          u_.first += directionVector_[i].first * grid_[row][col][i];
+          u_.second += directionVector_[i].second * grid_[row][col][i];
+        }
+        u_ges = u_.first + u_.second;
+        u_.first = u_.first / u_ges;
+        u_.second = u_.second / u_ges;
+        for (int i = 0; i < 9; i++) {
+          double T_eq =
+              weights_[i] *
+              (1.0 + 3.0 / 2.0 * directionVector_[i].first * u_.first +
+               directionVector_[i].second * u_.second);
+
+          grid_T_[row][col][i] -= omega_T * (grid_T_[row][col][i] - T_eq);
+        }
+      }
+    }
   }
-
-
-
-
-  
 };
