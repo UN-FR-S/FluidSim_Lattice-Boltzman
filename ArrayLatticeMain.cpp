@@ -5,13 +5,15 @@
 
 int main() {
   datatype e = 0.1;
-  constexpr int N = 500;
+  constexpr int N = 1000;
   constexpr int ROWS = N;
   constexpr int COLS = N;
-  datatype Omega = 1.9;
+  //datatype Omega = 1.9;
+  datatype Omega = 1.5;
   datatype Fan_Speed = 0.2;
   SimGrid simGrid = SimGrid(N, N);
   simGrid.set_all_to_standard();
+  simGrid.set_half_to_O(simGrid.grid_T_);
   std::vector<datatype> vec1 = {4.0 / 9.0,   1.0f / 9.0f, 1.0 / 9.0,
                                 1.0f / 9.0f, 1.0 / 9.0,   1.0 / 36.0,
                                 1.0 / 36.0,  1.0 / 36.0,  1.0 / 36.0};
@@ -19,7 +21,7 @@ int main() {
   datatype avgstream = 0;
   datatype avgcollison = 0;
 
-  const int count_runs = 1000;
+  const int count_runs = 200;
 
   constexpr int WINDOW_WIDTH = 1920;
   constexpr int WINDOW_HEIGHT = 1080;
@@ -40,6 +42,8 @@ int main() {
     // simGrid.print_density();
     auto start_col = std::chrono::high_resolution_clock::now();
     simGrid.collision(Omega, Fan_Speed);
+    std::cout<<"Starting Collision";
+    simGrid.collision_T(1.0);
     auto end_col = std::chrono::high_resolution_clock::now();
     std::chrono::duration<datatype, std::micro> duration = end_col - start_col;
     avgcollison += duration.count();
@@ -68,10 +72,10 @@ int main() {
     for (int row = 0; row < ROWS; row++) {
       for (int col = 0; col < COLS; col++) {
 
-        double minValue = 0.90;
-        double maxValue = 1.10;
+        double minValue = 0.1;
+        double maxValue = 2.0;
 
-        double density = simGrid.get_density(row, col);
+        double density = simGrid.get_density(row, col, simGrid.grid_);
         double normalized = (density - minValue) / (maxValue - minValue);
         if (normalized < 0.5) {
           r = 0;

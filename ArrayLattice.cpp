@@ -4,6 +4,8 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <SFML/Graphics.hpp>
+
 
 using datatype = double;
 
@@ -34,6 +36,9 @@ public:
                                          r, std::vector<datatype>(c, 0.0))),
         grid_T_(9, std::vector<std::vector<datatype>>(
                        r, std::vector<datatype>(c, 0.0))),
+                       grid_C02_(9, std::vector<std::vector<datatype>>(
+                       r, std::vector<datatype>(c, 0.0))),
+                       
         directionVector_{{0, 0}, {1, 0},  {0, 1},   {-1, 0}, {0, -1},
                          {1, 1}, {-1, 1}, {-1, -1}, {1, -1}},
 
@@ -74,6 +79,26 @@ public:
         for (int col = 0; col < cols_; col++) {
           grid_.at(func).at(row).at(col) = val;
           grid_T_.at(func).at(row).at(col) = val;
+          grid_C02_.at(func).at(row).at(col) = val;
+        }
+      }
+    }
+  }
+
+  void set_half_to_O(std::vector<std::vector<std::vector<datatype>>> & grid){
+    datatype val = 4.0 / 9.0;
+    for (int func = 0; func < 9; func++) {
+      if (func > 0 and func <= 4) {
+        val = 1.0 / 9.0;
+      } else if (func > 4) {
+        val = 1.0 / 36.0;
+      }
+      val *= 0.1;
+      for (int row = 0; row < (rows_ /2); row++) {
+        for (int col = 0; col < cols_; col++) {
+
+          grid.at(func).at(row).at(col) = val;
+  
         }
       }
     }
@@ -119,12 +144,15 @@ public:
   void shift(int x_shift, int y_shift, size_t function) {
     shift_X(x_shift, function, grid_);
     shift_Y(y_shift, function, grid_);
+    shift_X(x_shift, function, grid_T_);
+    shift_Y(y_shift, function, grid_T_);
   }
 
   // Finishes Stream Stage.
   void step() {
     for (int f = 0; f < 9; f++) {
       shift(directionVector_[f].first, directionVector_[f].second, f);
+     
     }
     dt++;
   }
@@ -216,11 +244,11 @@ public:
     std::cout << "_______________________________________\n";
   }
 
-  datatype get_density(int row, int col) {
+  datatype get_density(int row, int col, std::vector<std::vector<std::vector<datatype>>> &grid) {
 
     datatype density = 0;
     for (int i = 0; i < 9; i++) {
-      density += grid_[i][row][col];
+      density += grid[i][row][col];
     }
     return density;
   }
@@ -276,32 +304,96 @@ public:
   void stream_with_bc() {}
 
   void collision_T(double omega_T = 1.0) {
-    T_density = grid_T_[0];
+    std::cout<< "Start Function \n";
+    //T_density = grid_T_[0];
     double T_density = 0;
+    double ux = 0.0;
+    double uy = 0.0;
     double u_ges = 0;
     for (int row = 0; row < rows_; row++) {
       for (int col = 0; col < cols_; col++) {
+
         T_density = 0;
-        u_.first = 0;
-        u_.second = 0;
+        ux = 0;
+        uy = 0;
 
         for (int i = 0; i < 9; i++) {
-          T_density += grid_T_[row][col][i];
-          u_.first += directionVector_[i].first * grid_[row][col][i];
-          u_.second += directionVector_[i].second * grid_[row][col][i];
+          T_density += grid_T_[i][row][col];
+          ux += directionVector_[i].first * grid_[i][row][col];
+          uy += directionVector_[i].second * grid_[i][row][col];
         }
-        u_ges = u_.first + u_.second;
-        u_.first = u_.first / u_ges;
-        u_.second = u_.second / u_ges;
+        u_ges = get_density(row,col,grid_);
+        ux /= u_ges;
+        uy /= u_ges;
         for (int i = 0; i < 9; i++) {
           double T_eq =
-              weights_[i] *
-              (1.0 + 3.0 / 2.0 * directionVector_[i].first * u_.first +
-               directionVector_[i].second * u_.second);
+              weights_[i] * T_density *
+              (1.0 + 3.0 * directionVector_[i].first * ux +
+               directionVector_[i].second * uy);
+               double T_i = grid_T_[i][row][col];
 
-          grid_T_[row][col][i] -= omega_T * (grid_T_[row][col][i] - T_eq);
+          grid_T_[i][row][col] = grid_T_[i][row][col] - omega_T * (T_i - T_eq);
+          //std::cout<< "Row/Col" << row << "/" << col << " : " << T_i<< "\n";
         }
       }
     }
   }
+};
+
+
+
+
+
+class HeatMap {
+  public:
+    HeatMap(unsigned width, unsigned height)
+        : m_width(width),
+          m_height(height),
+          pixels_u(width*height*4),
+          pixels_T(width*height*4),
+          pixels_C(width*height*4)
+    {
+        m_image.create(width, height, sf::Color::Black);
+        m_texture.create(width, height);
+        m_sprite.setTexture(m_texture);
+        
+    }
+
+    void update(SimGrid &grid){
+      return;
+      for(int row = 0; row< grid.rows_; row++){
+        for (int col = 0; col < grid.cols_; col++){
+          
+        }
+      }
+    }
+
+
+    void setPosition(float x, float y)
+    {
+        m_sprite.setPosition(x, y);
+    }
+
+    void setScale(float sx, float sy)
+    {
+        m_sprite.setScale(sx, sy);
+    }
+
+    void draw(sf::RenderWindow& window)
+    {
+        window.draw(m_sprite);
+    }
+
+
+    private:
+    unsigned m_width;
+    unsigned m_height;
+
+    std::vector<sf::Uint8> pixels_u;
+    std::vector<sf::Uint8> pixels_T;
+    std::vector<sf::Uint8> pixels_C;
+
+    sf::Image m_image;
+    sf::Texture m_texture;
+    sf::Sprite m_sprite;
 };
