@@ -9,6 +9,8 @@ int main() {
   constexpr int ROWS = N;
   constexpr int COLS = N;
   // datatype Omega = 1.9;
+
+  auto full_time = std::chrono::high_resolution_clock::now();
   datatype Omega = 1.5;
   datatype Fan_Speed = 0.1;
   SimGrid simGrid = SimGrid(N, N);
@@ -29,6 +31,7 @@ int main() {
   sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT),
                           "Heatmap");
 
+                            window.setVerticalSyncEnabled(true);
   std::vector<sf::Uint8> pixels(ROWS * COLS * 4);
   sf::Texture texture;
   texture.create(COLS, ROWS);
@@ -42,7 +45,6 @@ int main() {
     // simGrid.print_density();
     auto start_col = std::chrono::high_resolution_clock::now();
     simGrid.collision(Omega, Fan_Speed);
-    std::cout << "Starting Collision";
     simGrid.collision_T_C02(1.0, 1.0);
     auto end_col = std::chrono::high_resolution_clock::now();
     std::chrono::duration<datatype, std::micro> duration = end_col - start_col;
@@ -57,6 +59,8 @@ int main() {
     // std::cout << "DauerStream: " << duration_step.count() << " micro s\n";
     avgstream += duration_step.count();
 
+
+    
     sf::Event event;
 
     while (window.pollEvent(event)) {
@@ -64,16 +68,21 @@ int main() {
         window.close();
     }
 
-    window.clear(sf::Color::White);
+    
+
+   
     sf::Uint8 r;
     sf::Uint8 g;
     sf::Uint8 b;
-    if (t % 200 == 0) {
+    double minValue = 0.0;
+    double maxValue = 2.0;
+    
+    if (t % 2000 == 0) {
+      auto start_render = std::chrono::high_resolution_clock::now();
       for (int row = 0; row < ROWS; row++) {
         for (int col = 0; col < COLS; col++) {
 
-          double minValue = 0.0;
-          double maxValue = 2.0;
+          
 
           double density = simGrid.get_density(row, col, simGrid.grid_T_);
           double normalized = (density - minValue) / (maxValue - minValue);
@@ -93,9 +102,13 @@ int main() {
           pixels[index + 3] = 250;
         }
       }
-    }
+    
 
-    if (t % 200 == 0) {
+      
+
+    
+    
+
       window.setTitle("Heatmap t:" + std::to_string(t));
       texture.update(pixels.data());
 
@@ -103,6 +116,11 @@ int main() {
 
       window.draw(sprite);
       window.display();
+      
+       auto end_render = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<datatype, std::micro> render_d = end_render - start_render;
+      std::cout<<" Dauer Bilddarstellung: " << render_d.count() << " in micro s. \n";
     }
 
     // double sleep_time = 0.25 - 1e-6 * duration_step.count();
@@ -112,6 +130,7 @@ int main() {
 
     t++;
   }
+  auto end_time = std::chrono::high_resolution_clock::now();
   avgstream = avgstream / count_runs;
   avgcollison = avgcollison / count_runs;
 
@@ -121,4 +140,10 @@ int main() {
             << avgcollison << " micro s \n";
   std::cout << "Durchschnittliche Gesamtlaufzeit: " << avgcollison + avgstream
             << " micro s \n";
+
+  std::chrono::duration<datatype> duration = end_time - full_time;
+
+  std::cout << "Gesamtzeit: " << duration.count() << " s. \n";
+  std::cout << "Anzahl Cycles: " << t << ".\n";
+  std::cout << "Zeit pro Cycle: " << duration.count() / t << " s.\n"; 
 };

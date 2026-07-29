@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -O3
+CXXFLAGS = -std=c++17 -O3 -fopenmp -march=native
 TEST_LIBS = -lgtest
 LIBS = -lsfml-graphics -lsfml-window -lsfml-system
 

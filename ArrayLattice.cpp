@@ -3,6 +3,7 @@
 #include <algorithm> // std::rotate
 #include <iomanip>   // Print_grid uses set_w
 #include <iostream>
+#include <omp.h>
 #include <thread>
 #include <vector>
 
@@ -123,19 +124,21 @@ public:
     if (shift == 0) {
       return;
     }
-    if (shift < 0) {
-      for (int row = 0; row < rows_; row++) {
+
+    for (int row = 0; row< rows_; row++){
+      if (shift < 0){
         std::rotate(grid[function][row].begin(),
                     grid[function][row].begin() - shift,
                     grid[function][row].end());
       }
-    } else {
-      for (int row = 0; row < rows_; row++) {
+      else{
         std::rotate(grid[function][row].begin(),
                     grid[function][row].end() - shift,
                     grid[function][row].end());
+
       }
     }
+
   }
 
   // Combined Shift
@@ -304,14 +307,13 @@ public:
   void stream_with_bc() {}
 
   void collision_T_C02(double omega_T = 1.0, double omega_C = 1.0) {
-    std::cout << "Start Function \n";
     // T_density = grid_T_[0];
     double T_density = 0;
     double C_Density = 0;
     double ux = 0.0;
     double uy = 0.0;
     double u_ges = 0;
-
+#pragma omp parallel for schedule(static)
     for (int row = 0; row < rows_; row++) {
       for (int col = 0; col < cols_; col++) {
 
