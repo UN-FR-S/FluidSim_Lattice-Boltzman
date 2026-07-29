@@ -8,7 +8,7 @@ int main() {
   constexpr int N = 1000;
   constexpr int ROWS = N;
   constexpr int COLS = N;
-  //datatype Omega = 1.9;
+  // datatype Omega = 1.9;
   datatype Omega = 1.5;
   datatype Fan_Speed = 0.2;
   SimGrid simGrid = SimGrid(N, N);
@@ -42,8 +42,8 @@ int main() {
     // simGrid.print_density();
     auto start_col = std::chrono::high_resolution_clock::now();
     simGrid.collision(Omega, Fan_Speed);
-    std::cout<<"Starting Collision";
-    simGrid.collision_T(1.0);
+    std::cout << "Starting Collision";
+    simGrid.collision_T_C02(1.0,1.0);
     auto end_col = std::chrono::high_resolution_clock::now();
     std::chrono::duration<datatype, std::micro> duration = end_col - start_col;
     avgcollison += duration.count();
@@ -75,7 +75,7 @@ int main() {
         double minValue = 0.1;
         double maxValue = 2.0;
 
-        double density = simGrid.get_density(row, col, simGrid.grid_);
+        double density = simGrid.get_density(row, col, simGrid.grid_C02_);
         double normalized = (density - minValue) / (maxValue - minValue);
         if (normalized < 0.5) {
           r = 0;

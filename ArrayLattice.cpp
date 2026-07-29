@@ -1,11 +1,10 @@
 
+#include <SFML/Graphics.hpp>
 #include <algorithm> // std::rotate
 #include <iomanip>   // Print_grid uses set_w
 #include <iostream>
 #include <thread>
 #include <vector>
-#include <SFML/Graphics.hpp>
-
 
 using datatype = double;
 
@@ -36,9 +35,9 @@ public:
                                          r, std::vector<datatype>(c, 0.0))),
         grid_T_(9, std::vector<std::vector<datatype>>(
                        r, std::vector<datatype>(c, 0.0))),
-                       grid_C02_(9, std::vector<std::vector<datatype>>(
-                       r, std::vector<datatype>(c, 0.0))),
-                       
+        grid_C02_(9, std::vector<std::vector<datatype>>(
+                         r, std::vector<datatype>(c, 0.0))),
+
         directionVector_{{0, 0}, {1, 0},  {0, 1},   {-1, 0}, {0, -1},
                          {1, 1}, {-1, 1}, {-1, -1}, {1, -1}},
 
@@ -85,7 +84,7 @@ public:
     }
   }
 
-  void set_half_to_O(std::vector<std::vector<std::vector<datatype>>> & grid){
+  void set_half_to_O(std::vector<std::vector<std::vector<datatype>>> &grid) {
     datatype val = 4.0 / 9.0;
     for (int func = 0; func < 9; func++) {
       if (func > 0 and func <= 4) {
@@ -94,11 +93,10 @@ public:
         val = 1.0 / 36.0;
       }
       val *= 0.1;
-      for (int row = 0; row < (rows_ /2); row++) {
+      for (int row = 0; row < (rows_ / 2); row++) {
         for (int col = 0; col < cols_; col++) {
 
           grid.at(func).at(row).at(col) = val;
-  
         }
       }
     }
@@ -146,13 +144,14 @@ public:
     shift_Y(y_shift, function, grid_);
     shift_X(x_shift, function, grid_T_);
     shift_Y(y_shift, function, grid_T_);
+    shift_X(x_shift, function, grid_C02_);
+    shift_Y(y_shift, function, grid_C02_);
   }
 
   // Finishes Stream Stage.
   void step() {
     for (int f = 0; f < 9; f++) {
       shift(directionVector_[f].first, directionVector_[f].second, f);
-     
     }
     dt++;
   }
@@ -244,7 +243,8 @@ public:
     std::cout << "_______________________________________\n";
   }
 
-  datatype get_density(int row, int col, std::vector<std::vector<std::vector<datatype>>> &grid) {
+  datatype get_density(int row, int col,
+                       std::vector<std::vector<std::vector<datatype>>> &grid) {
 
     datatype density = 0;
     for (int i = 0; i < 9; i++) {
@@ -303,97 +303,88 @@ public:
 
   void stream_with_bc() {}
 
-  void collision_T(double omega_T = 1.0) {
-    std::cout<< "Start Function \n";
-    //T_density = grid_T_[0];
+  void collision_T_C02(double omega_T = 1.0, double omega_C = 1.0) {
+    std::cout << "Start Function \n";
+    // T_density = grid_T_[0];
     double T_density = 0;
+    double C_Density = 0;
     double ux = 0.0;
     double uy = 0.0;
     double u_ges = 0;
+
     for (int row = 0; row < rows_; row++) {
       for (int col = 0; col < cols_; col++) {
 
         T_density = 0;
+        C_Density = 0;
         ux = 0;
         uy = 0;
 
         for (int i = 0; i < 9; i++) {
           T_density += grid_T_[i][row][col];
+          C_Density += grid_C02_[i][row][col];
           ux += directionVector_[i].first * grid_[i][row][col];
           uy += directionVector_[i].second * grid_[i][row][col];
         }
-        u_ges = get_density(row,col,grid_);
+        u_ges = get_density(row, col, grid_);
         ux /= u_ges;
         uy /= u_ges;
         for (int i = 0; i < 9; i++) {
-          double T_eq =
-              weights_[i] * T_density *
-              (1.0 + 3.0 * directionVector_[i].first * ux +
-               directionVector_[i].second * uy);
-               double T_i = grid_T_[i][row][col];
+          double T_eq = weights_[i] * T_density *
+                        (1.0 + 3.0 * directionVector_[i].first * ux +
+                         directionVector_[i].second * uy);
+
+          double C_eq = weights_[i] * C_Density *
+                        (1.0 + 3.0 * directionVector_[i].first * ux +
+                         directionVector_[i].second * uy);
+          
+          double T_i = grid_T_[i][row][col];
+          double C_i = grid_C02_[i][row][col];
 
           grid_T_[i][row][col] = grid_T_[i][row][col] - omega_T * (T_i - T_eq);
-          //std::cout<< "Row/Col" << row << "/" << col << " : " << T_i<< "\n";
+          grid_C02_[i][row][col] = C_i - omega_C * (C_i-C_eq);
+          // std::cout<< "Row/Col" << row << "/" << col << " : " << T_i<< "\n";
         }
       }
     }
   }
+
+  void collision_C02(double omega_T = 1.0) {}
 };
 
-
-
-
-
 class HeatMap {
-  public:
-    HeatMap(unsigned width, unsigned height)
-        : m_width(width),
-          m_height(height),
-          pixels_u(width*height*4),
-          pixels_T(width*height*4),
-          pixels_C(width*height*4)
-    {
-        m_image.create(width, height, sf::Color::Black);
-        m_texture.create(width, height);
-        m_sprite.setTexture(m_texture);
-        
-    }
+public:
+  HeatMap(unsigned width, unsigned height)
+      : m_width(width), m_height(height), pixels_u(width * height * 4),
+        pixels_T(width * height * 4), pixels_C(width * height * 4) {
+    m_image.create(width, height, sf::Color::Black);
+    m_texture.create(width, height);
+    m_sprite.setTexture(m_texture);
+  }
 
-    void update(SimGrid &grid){
-      return;
-      for(int row = 0; row< grid.rows_; row++){
-        for (int col = 0; col < grid.cols_; col++){
-          
-        }
+  void update(SimGrid &grid) {
+    return;
+    for (int row = 0; row < grid.rows_; row++) {
+      for (int col = 0; col < grid.cols_; col++) {
       }
     }
+  }
 
+  void setPosition(float x, float y) { m_sprite.setPosition(x, y); }
 
-    void setPosition(float x, float y)
-    {
-        m_sprite.setPosition(x, y);
-    }
+  void setScale(float sx, float sy) { m_sprite.setScale(sx, sy); }
 
-    void setScale(float sx, float sy)
-    {
-        m_sprite.setScale(sx, sy);
-    }
+  void draw(sf::RenderWindow &window) { window.draw(m_sprite); }
 
-    void draw(sf::RenderWindow& window)
-    {
-        window.draw(m_sprite);
-    }
+private:
+  unsigned m_width;
+  unsigned m_height;
 
+  std::vector<sf::Uint8> pixels_u;
+  std::vector<sf::Uint8> pixels_T;
+  std::vector<sf::Uint8> pixels_C;
 
-    private:
-    unsigned m_width;
-    unsigned m_height;
-
-    std::vector<sf::Uint8> pixels_u;
-    std::vector<sf::Uint8> pixels_T;
-    std::vector<sf::Uint8> pixels_C;
-
-    sf::Image m_image;
-    sf::Texture m_texture;
-    sf::Sprite m_sprite;
+  sf::Image m_image;
+  sf::Texture m_texture;
+  sf::Sprite m_sprite;
 };
