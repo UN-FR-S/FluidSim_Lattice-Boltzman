@@ -10,10 +10,10 @@ int main() {
   constexpr int COLS = N;
   // datatype Omega = 1.9;
   datatype Omega = 1.5;
-  datatype Fan_Speed = 0.2;
+  datatype Fan_Speed = 0.1;
   SimGrid simGrid = SimGrid(N, N);
   simGrid.set_all_to_standard();
-  simGrid.set_half_to_O(simGrid.grid_T_);
+  simGrid.set_half_to_O1(simGrid.grid_T_);
   std::vector<datatype> vec1 = {4.0 / 9.0,   1.0f / 9.0f, 1.0 / 9.0,
                                 1.0f / 9.0f, 1.0 / 9.0,   1.0 / 36.0,
                                 1.0 / 36.0,  1.0 / 36.0,  1.0 / 36.0};
@@ -21,7 +21,7 @@ int main() {
   datatype avgstream = 0;
   datatype avgcollison = 0;
 
-  const int count_runs = 200;
+  const int count_runs = 20000;
 
   constexpr int WINDOW_WIDTH = 1920;
   constexpr int WINDOW_HEIGHT = 1080;
@@ -43,7 +43,7 @@ int main() {
     auto start_col = std::chrono::high_resolution_clock::now();
     simGrid.collision(Omega, Fan_Speed);
     std::cout << "Starting Collision";
-    simGrid.collision_T_C02(1.0,1.0);
+    simGrid.collision_T_C02(1.0, 1.0);
     auto end_col = std::chrono::high_resolution_clock::now();
     std::chrono::duration<datatype, std::micro> duration = end_col - start_col;
     avgcollison += duration.count();
@@ -68,41 +68,47 @@ int main() {
     sf::Uint8 r;
     sf::Uint8 g;
     sf::Uint8 b;
+    if (t % 200 == 0) {
+      for (int row = 0; row < ROWS; row++) {
+        for (int col = 0; col < COLS; col++) {
 
-    for (int row = 0; row < ROWS; row++) {
-      for (int col = 0; col < COLS; col++) {
+          double minValue = 0.0;
+          double maxValue = 2.0;
 
-        double minValue = 0.1;
-        double maxValue = 2.0;
-
-        double density = simGrid.get_density(row, col, simGrid.grid_C02_);
-        double normalized = (density - minValue) / (maxValue - minValue);
-        if (normalized < 0.5) {
-          r = 0;
-          g = static_cast<sf::Uint8>(normalized * 2 * 255);
-          b = static_cast<sf::Uint8>((1 - normalized * 2) * 255);
-        } else {
-          r = static_cast<sf::Uint8>((normalized - 0.5) * 2 * 255);
-          g = static_cast<sf::Uint8>((1 - (normalized - 0.5) * 2) * 255);
-          b = 0;
+          double density = simGrid.get_density(row, col, simGrid.grid_T_);
+          double normalized = (density - minValue) / (maxValue - minValue);
+          if (normalized < 0.5) {
+            r = 0;
+            g = static_cast<sf::Uint8>(normalized * 2 * 255);
+            b = static_cast<sf::Uint8>((1 - normalized * 2) * 255);
+          } else {
+            r = static_cast<sf::Uint8>((normalized - 0.5) * 2 * 255);
+            g = static_cast<sf::Uint8>((1 - (normalized - 0.5) * 2) * 255);
+            b = 0;
+          }
+          int index = 4 * (row * COLS + col);
+          pixels[index + 0] = r;
+          pixels[index + 1] = g;
+          pixels[index + 2] = b;
+          pixels[index + 3] = 250;
         }
-        int index = 4 * (row * COLS + col);
-        pixels[index + 0] = r;
-        pixels[index + 1] = g;
-        pixels[index + 2] = b;
-        pixels[index + 3] = 250;
       }
     }
-    texture.update(pixels.data());
 
-    window.clear();
+    if (t % 200 == 0) {
+      window.setTitle("Heatmap t:" + std::to_string(t));
+      texture.update(pixels.data());
 
-    window.draw(sprite);
-    window.display();
-    double sleep_time = 0.25 - 1e-6 * duration_step.count();
-    if (sleep_time > 0) {
-      sf::sleep(sf::seconds(sleep_time));
+      window.clear();
+
+      window.draw(sprite);
+      window.display();
     }
+
+    // double sleep_time = 0.25 - 1e-6 * duration_step.count();
+    // if (sleep_time > 0) {
+    //   sf::sleep(sf::seconds(sleep_time));
+    // }
 
     t++;
   }

@@ -84,7 +84,7 @@ public:
     }
   }
 
-  void set_half_to_O(std::vector<std::vector<std::vector<datatype>>> &grid) {
+  void set_half_to_O1(std::vector<std::vector<std::vector<datatype>>> &grid) {
     datatype val = 4.0 / 9.0;
     for (int func = 0; func < 9; func++) {
       if (func > 0 and func <= 4) {
@@ -265,8 +265,8 @@ public:
 
   bool is_fan_proportional(int row, int col) {
     int mincols = cols_ * 0.20;
-    int maxcols = cols_ * 0.25;
-    int correct_row = rows_ * 0.15;
+    int maxcols = cols_ * 0.30;
+    int correct_row = rows_ * 0.5;
 
     if (row == correct_row and col > mincols and col < maxcols) {
       return true;
@@ -337,12 +337,12 @@ public:
           double C_eq = weights_[i] * C_Density *
                         (1.0 + 3.0 * directionVector_[i].first * ux +
                          directionVector_[i].second * uy);
-          
+
           double T_i = grid_T_[i][row][col];
           double C_i = grid_C02_[i][row][col];
 
           grid_T_[i][row][col] = grid_T_[i][row][col] - omega_T * (T_i - T_eq);
-          grid_C02_[i][row][col] = C_i - omega_C * (C_i-C_eq);
+          grid_C02_[i][row][col] = C_i - omega_C * (C_i - C_eq);
           // std::cout<< "Row/Col" << row << "/" << col << " : " << T_i<< "\n";
         }
       }
