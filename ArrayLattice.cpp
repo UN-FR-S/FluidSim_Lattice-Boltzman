@@ -351,7 +351,88 @@ public:
     }
   }
 
-  void collision_C02(double omega_T = 1.0) {}
+  void fast_collision(double omega = 1.0,double omega_T = 1.0,double omega_C = 1.0, datatype fan_speed = 1.0) {
+    double T_density = 0;
+    double T_eq= 0;
+
+    double C_Density = 0;
+    double C_eq= 0;
+
+    double ux = 0.0;
+    double uy = 0.0;
+    double u_ges = 0;
+    double d_u = 0;
+
+    double f_i = 0;
+    double T_i = 0;
+    double C_i = 0;
+
+    double u_val = 0;
+
+#pragma omp parallel for schedule(static)
+    for (int row = 0; row < rows_; row++) {
+      for (int col = 0; col < cols_; col++) {
+
+        T_density = 0;
+        C_Density = 0;
+        ux = 0;
+        uy = 0;
+        u_ges = 0;
+        u_val = 0;
+
+        if (is_fan_proportional(row, col)) {
+          ux = 0;
+          uy = fan_speed;
+          for (int i = 0; i < 9; i++) {
+          T_density += grid_T_[i][row][col];
+          C_Density += grid_C02_[i][row][col];
+          u_val = grid_[i][row][col];
+          u_ges += u_val;
+        }
+      }
+        else{
+          for (int i = 0; i < 9; i++) {
+          T_density += grid_T_[i][row][col];
+          C_Density += grid_C02_[i][row][col];
+          u_val = grid_[i][row][col];
+          ux += directionVector_[i].first * u_val;
+          uy += directionVector_[i].second * u_val;
+          u_ges += u_val;
+        }
+
+        }
+        
+        ux /= u_ges;
+        uy /= u_ges;
+        for (int i = 0; i < 9; i++) {
+
+          d_u = directionVector_[i].first * ux+
+                directionVector_[i].second * uy;
+
+          T_eq = weights_[i] * T_density *
+                        (1.0 + 3.0 * d_u);
+
+          C_eq = weights_[i] * C_Density *
+                        (1.0 + 3.0 * d_u);
+
+          T_i = grid_T_[i][row][col];
+          C_i = grid_C02_[i][row][col];
+          f_i = grid_[i][row][col];
+
+          grid_T_[i][row][col] = T_i - omega_T * (T_i - T_eq);
+          grid_C02_[i][row][col] = C_i - omega_C * (C_i - C_eq);
+          grid_[i][row][col] =
+              f_i - omega * (f_i - weights_[i] * u_ges *
+                                       (1 + 3 * (d_u) + 4.5 * (d_u * d_u) -
+                                        1.5 * (ux * ux +
+                                               uy * uy)));
+
+        }
+      }
+    }
+
+
+  }
 };
 
 class HeatMap {

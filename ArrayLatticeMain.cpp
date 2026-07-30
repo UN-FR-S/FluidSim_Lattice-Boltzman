@@ -12,6 +12,8 @@ int main() {
 
   auto full_time = std::chrono::high_resolution_clock::now();
   datatype Omega = 1.5;
+  datatype Omega_T = 1.0;
+  datatype Omega_C = 1.0;
   datatype Fan_Speed = 0.1;
   SimGrid simGrid = SimGrid(N, N);
   simGrid.set_all_to_standard();
@@ -23,7 +25,7 @@ int main() {
   datatype avgstream = 0;
   datatype avgcollison = 0;
 
-  const int count_runs = 20000;
+  const int count_runs = 1000;
 
   constexpr int WINDOW_WIDTH = 1920;
   constexpr int WINDOW_HEIGHT = 1080;
@@ -44,8 +46,9 @@ int main() {
   while (window.isOpen() and t < count_runs) {
     // simGrid.print_density();
     auto start_col = std::chrono::high_resolution_clock::now();
-    simGrid.collision(Omega, Fan_Speed);
-    simGrid.collision_T_C02(1.0, 1.0);
+    //simGrid.collision(Omega, Fan_Speed);
+    //simGrid.collision_T_C02(1.0, 1.0);
+    simGrid.fast_collision(Omega,Omega_T,Omega_C,Fan_Speed); 
     auto end_col = std::chrono::high_resolution_clock::now();
     std::chrono::duration<datatype, std::micro> duration = end_col - start_col;
     avgcollison += duration.count();
@@ -77,12 +80,13 @@ int main() {
     double minValue = 0.0;
     double maxValue = 2.0;
     
-    if (t % 2000 == 0) {
+    if (t % 200 == 0) {
       auto start_render = std::chrono::high_resolution_clock::now();
+      #pragma omp parallel for schedule(static)
       for (int row = 0; row < ROWS; row++) {
         for (int col = 0; col < COLS; col++) {
 
-          
+           
 
           double density = simGrid.get_density(row, col, simGrid.grid_T_);
           double normalized = (density - minValue) / (maxValue - minValue);
