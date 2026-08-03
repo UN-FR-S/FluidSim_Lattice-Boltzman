@@ -5,7 +5,7 @@
 
 int main() {
   datatype e = 0.1;
-  constexpr int N = 1000;
+  constexpr int N = 200;
   constexpr int ROWS = N;
   constexpr int COLS = N;
   // datatype Omega = 1.9;
@@ -24,8 +24,9 @@ int main() {
   simGrid.set_point(1, 1, vec1);
   datatype avgstream = 0;
   datatype avgcollison = 0;
+  datatype avgbc = 0.0;
 
-  const int count_runs = 1000;
+  const int count_runs = 20000;
 
   constexpr int WINDOW_WIDTH = 1920;
   constexpr int WINDOW_HEIGHT = 1080;
@@ -48,7 +49,7 @@ int main() {
     auto start_col = std::chrono::high_resolution_clock::now();
     //simGrid.collision(Omega, Fan_Speed);
     //simGrid.collision_T_C02(1.0, 1.0);
-    simGrid.fast_collision(Omega,Omega_T,Omega_C,Fan_Speed); 
+    simGrid.fast_collision(Omega,Omega_T,Omega_C,Fan_Speed);   
     auto end_col = std::chrono::high_resolution_clock::now();
     std::chrono::duration<datatype, std::micro> duration = end_col - start_col;
     avgcollison += duration.count();
@@ -61,6 +62,16 @@ int main() {
         end_step - start_step;
     // std::cout << "DauerStream: " << duration_step.count() << " micro s\n";
     avgstream += duration_step.count();
+
+    auto start_bc = std::chrono::high_resolution_clock::now();
+    simGrid.simpleBounceBack_bc(simGrid.grid_);
+    simGrid.simpleBounceBack_bc(simGrid.grid_T_);
+    simGrid.simpleBounceBack_bc(simGrid.grid_C02_);
+    auto end_bc = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<datatype, std::micro> duration_bc =
+        end_bc - start_bc;
+    // std::cout << "DauerStream: " << duration_step.count() << " micro s\n";
+    avgbc+= duration_bc.count();
 
 
     
@@ -124,7 +135,7 @@ int main() {
        auto end_render = std::chrono::high_resolution_clock::now();
 
     std::chrono::duration<datatype, std::micro> render_d = end_render - start_render;
-      std::cout<<" Dauer Bilddarstellung: " << render_d.count() << " in micro s. \n";
+      //std::cout<<" Dauer Bilddarstellung: " << render_d.count() << " in micro s. \n";
     }
 
     // double sleep_time = 0.25 - 1e-6 * duration_step.count();
@@ -137,11 +148,15 @@ int main() {
   auto end_time = std::chrono::high_resolution_clock::now();
   avgstream = avgstream / count_runs;
   avgcollison = avgcollison / count_runs;
+  avgbc = avgbc / count_runs;
 
   std::cout << "Durchschnittliche Laufzeit Stream bei N = " << N << " : "
             << avgstream << " micro s \n";
   std::cout << "Durschnittliche Laufzeit Collision bei N = " << N << " : "
             << avgcollison << " micro s \n";
+
+            std::cout << "Durschnittliche Laufzeit Boundary bei N = " << N << " : "
+            << avgbc << " micro s \n";
   std::cout << "Durchschnittliche Gesamtlaufzeit: " << avgcollison + avgstream
             << " micro s \n";
 

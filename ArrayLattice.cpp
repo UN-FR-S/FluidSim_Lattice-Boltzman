@@ -6,6 +6,7 @@
 #include <omp.h>
 #include <thread>
 #include <vector>
+#include <math.h>  
 
 using datatype = double;
 
@@ -124,7 +125,7 @@ public:
     if (shift == 0) {
       return;
     }
-
+    
     for (int row = 0; row< rows_; row++){
       if (shift < 0){
         std::rotate(grid[function][row].begin(),
@@ -153,7 +154,8 @@ public:
 
   // Finishes Stream Stage.
   void step() {
-    for (int f = 0; f < 9; f++) {
+    #pragma omp parallel for schedule(static)
+    for (int f = 1; f < 9; f++) {
       shift(directionVector_[f].first, directionVector_[f].second, f);
     }
     dt++;
@@ -304,7 +306,86 @@ public:
     return dt - timeatStart;
   }
 
-  void stream_with_bc() {}
+  void simpleBounceBack_bc(std::vector<std::vector<std::vector<datatype>>> &grid) {
+    // Channel 1 and 3
+    
+    #pragma omp parallel for schedule(static)
+    for(int row = 0; row < rows_; row++){
+      datatype tmp;
+      tmp = grid[1][row][1];
+      grid[1][row][1] = grid[3][row][0];
+      grid[3][row][0] = tmp;
+      
+      tmp = grid[1][row][cols_-1];
+      grid[1][row][cols_-1] = grid[3][row][cols_ -2];
+      grid[3][row][cols_ -2] = tmp;
+    }
+    // Channel 2 and 4
+    #pragma omp parallel for schedule(static)
+    for (int col = 0; col < cols_ ; col++){
+      datatype tmp;
+      tmp = grid[2][0][col];
+      grid[2][0][col] = grid[4][1][col];
+      grid[4][1][col] = tmp;
+
+      tmp = grid[2][rows_-2][col];
+      grid[2][rows_-2][col] = grid[4][rows_-1][col];
+      grid[4][rows_-1][col] = tmp;
+    }
+
+    //Channel 5 and 7:
+
+    for (int row = 2; row < rows_; row++){
+      datatype tmp;
+      tmp = grid[7][row][0];
+      grid[7][row][0] = grid[5][row -1][1];
+      grid[5][row -1][1] = tmp;
+    }
+    for (int col = 1; col < cols_ -2; col++){
+      datatype tmp;
+      tmp = grid[7][rows_-1][col];
+      grid[7][rows_-1][col] = grid[5][rows_-2][col +1];
+      grid[5][rows_-2][col +1] = tmp;
+    }
+    for (int col = 2; col < cols_; col++){
+      datatype tmp;
+      tmp = grid[5][0][col];
+      grid[5][0][col] = grid[7][1][col-1];
+      grid[7][1][col-1] = tmp;
+    }
+    for (int row = 1; row < rows_-2; row++){
+      datatype tmp;
+      tmp = grid[5][row][cols_-1];
+      grid[5][row][cols_-1] = grid[7][row +1][cols_-2];
+      grid[7][row +1][cols_-2] = tmp;
+    }
+
+    // Channel 6 and 8
+    for (int col = 0;col < cols_-2; col++){
+      datatype tmp;
+      tmp = grid[6][0][col];
+      grid[6][0][col] = grid[8][1][col +1];
+      grid[8][1][col +1] = tmp;
+    }
+    for(int row = 1; row < rows_-2; row++){
+      datatype tmp = grid[6][row][0];
+      grid[6][row][0] = grid[8][row+1][1];
+      grid[8][row+1][1] = tmp;
+    }
+
+    for(int col = 2; col < cols_; col++){
+      datatype tmp =  grid[8][rows_-1][col];
+      grid[8][rows_-1][col] = grid[6][rows_-2][col-1];
+      grid[6][rows_-2][col-1] = tmp;
+    }
+
+    for (int row = 2; row< rows_-1;row++){
+      datatype tmp = grid[8][row][cols_ -1];
+      grid[8][row][cols_ -1] = grid[6][row -1][cols_-2];
+      grid[6][row -1][cols_-2] = tmp;
+    }
+  }
+
 
   void collision_T_C02(double omega_T = 1.0, double omega_C = 1.0) {
     // T_density = grid_T_[0];
@@ -401,9 +482,11 @@ public:
         }
 
         }
+        if (fabs(u_ges -0.0) > 0.0001){
+          ux /= u_ges;
+          uy /= u_ges;
+        }
         
-        ux /= u_ges;
-        uy /= u_ges;
         for (int i = 0; i < 9; i++) {
 
           d_u = directionVector_[i].first * ux+
