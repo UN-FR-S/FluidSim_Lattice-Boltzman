@@ -3,10 +3,10 @@
 #include <algorithm> // std::rotate
 #include <iomanip>   // Print_grid uses set_w
 #include <iostream>
+#include <math.h>
 #include <omp.h>
 #include <thread>
 #include <vector>
-#include <math.h>  
 
 using datatype = double;
 
@@ -86,6 +86,22 @@ public:
     }
   }
 
+  void set_bc_to_0(std::vector<std::vector<std::vector<datatype>>> &grid){
+    for(int col = 0; col < cols_; col++){
+      for (int i = 0; i < 9; i++){
+        grid[i][0][col] = 0.0;
+        grid[i][rows_-1][col] = 0.0;
+      }
+    }
+
+    for ( int row = 1; row < rows_-1; row++){
+      for (int i = 0; i < 9; i++){
+        grid[i][row][0] = 0.0;
+        grid[i][row][cols_-1] = 0.0;
+      }
+    }
+  }
+
   void set_half_to_O1(std::vector<std::vector<std::vector<datatype>>> &grid) {
     datatype val = 4.0 / 9.0;
     for (int func = 0; func < 9; func++) {
@@ -125,21 +141,18 @@ public:
     if (shift == 0) {
       return;
     }
-    
-    for (int row = 0; row< rows_; row++){
-      if (shift < 0){
+
+    for (int row = 0; row < rows_; row++) {
+      if (shift < 0) {
         std::rotate(grid[function][row].begin(),
                     grid[function][row].begin() - shift,
                     grid[function][row].end());
-      }
-      else{
+      } else {
         std::rotate(grid[function][row].begin(),
                     grid[function][row].end() - shift,
                     grid[function][row].end());
-
       }
     }
-
   }
 
   // Combined Shift
@@ -154,7 +167,7 @@ public:
 
   // Finishes Stream Stage.
   void step() {
-    #pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static)
     for (int f = 1; f < 9; f++) {
       shift(directionVector_[f].first, directionVector_[f].second, f);
     }
@@ -306,86 +319,91 @@ public:
     return dt - timeatStart;
   }
 
-  void simpleBounceBack_bc(std::vector<std::vector<std::vector<datatype>>> &grid) {
+  void
+  simpleBounceBack_bc(std::vector<std::vector<std::vector<datatype>>> &grid) {
     // Channel 1 and 3
-    
-    #pragma omp parallel for schedule(static)
-    for(int row = 0; row < rows_; row++){
+
+#pragma omp parallel for schedule(static)
+    for (int row = 0; row < rows_; row++) {
       datatype tmp;
       tmp = grid[1][row][1];
       grid[1][row][1] = grid[3][row][0];
       grid[3][row][0] = tmp;
-      
-      tmp = grid[1][row][cols_-1];
-      grid[1][row][cols_-1] = grid[3][row][cols_ -2];
-      grid[3][row][cols_ -2] = tmp;
+
+      tmp = grid[1][row][cols_ - 1];
+      grid[1][row][cols_ - 1] = grid[3][row][cols_ - 2];
+      grid[3][row][cols_ - 2] = tmp;
     }
-    // Channel 2 and 4
-    #pragma omp parallel for schedule(static)
-    for (int col = 0; col < cols_ ; col++){
+// Channel 2 and 4
+#pragma omp parallel for schedule(static)
+    for (int col = 0; col < cols_; col++) {
       datatype tmp;
       tmp = grid[2][0][col];
       grid[2][0][col] = grid[4][1][col];
       grid[4][1][col] = tmp;
 
-      tmp = grid[2][rows_-2][col];
-      grid[2][rows_-2][col] = grid[4][rows_-1][col];
-      grid[4][rows_-1][col] = tmp;
+      tmp = grid[2][rows_ - 2][col];
+      grid[2][rows_ - 2][col] = grid[4][rows_ - 1][col];
+      grid[4][rows_ - 1][col] = tmp;
     }
 
-    //Channel 5 and 7:
-
-    for (int row = 2; row < rows_; row++){
+    // Channel 5 and 7:
+#pragma omp parallel for schedule(static)
+    for (int row = 2; row < rows_; row++) {
       datatype tmp;
       tmp = grid[7][row][0];
-      grid[7][row][0] = grid[5][row -1][1];
-      grid[5][row -1][1] = tmp;
+      grid[7][row][0] = grid[5][row - 1][1];
+      grid[5][row - 1][1] = tmp;
     }
-    for (int col = 1; col < cols_ -2; col++){
+    #pragma omp parallel for schedule(static)
+    for (int col = 1; col < cols_ - 2; col++) {
       datatype tmp;
-      tmp = grid[7][rows_-1][col];
-      grid[7][rows_-1][col] = grid[5][rows_-2][col +1];
-      grid[5][rows_-2][col +1] = tmp;
+      tmp = grid[7][rows_ - 1][col];
+      grid[7][rows_ - 1][col] = grid[5][rows_ - 2][col + 1];
+      grid[5][rows_ - 2][col + 1] = tmp;
     }
-    for (int col = 2; col < cols_; col++){
+    #pragma omp parallel for schedule(static)
+    for (int col = 2; col < cols_; col++) {
       datatype tmp;
       tmp = grid[5][0][col];
-      grid[5][0][col] = grid[7][1][col-1];
-      grid[7][1][col-1] = tmp;
+      grid[5][0][col] = grid[7][1][col - 1];
+      grid[7][1][col - 1] = tmp;
     }
-    for (int row = 1; row < rows_-2; row++){
+    #pragma omp parallel for schedule(static)
+    for (int row = 1; row < rows_ - 2; row++) {
       datatype tmp;
-      tmp = grid[5][row][cols_-1];
-      grid[5][row][cols_-1] = grid[7][row +1][cols_-2];
-      grid[7][row +1][cols_-2] = tmp;
+      tmp = grid[5][row][cols_ - 1];
+      grid[5][row][cols_ - 1] = grid[7][row + 1][cols_ - 2];
+      grid[7][row + 1][cols_ - 2] = tmp;
     }
 
     // Channel 6 and 8
-    for (int col = 0;col < cols_-2; col++){
+    #pragma omp parallel for schedule(static)
+    for (int col = 0; col < cols_ - 2; col++) {
       datatype tmp;
       tmp = grid[6][0][col];
-      grid[6][0][col] = grid[8][1][col +1];
-      grid[8][1][col +1] = tmp;
+      grid[6][0][col] = grid[8][1][col + 1];
+      grid[8][1][col + 1] = tmp;
     }
-    for(int row = 1; row < rows_-2; row++){
+    #pragma omp parallel for schedule(static)
+    for (int row = 1; row < rows_ - 2; row++) {
       datatype tmp = grid[6][row][0];
-      grid[6][row][0] = grid[8][row+1][1];
-      grid[8][row+1][1] = tmp;
+      grid[6][row][0] = grid[8][row + 1][1];
+      grid[8][row + 1][1] = tmp;
     }
-
-    for(int col = 2; col < cols_; col++){
-      datatype tmp =  grid[8][rows_-1][col];
-      grid[8][rows_-1][col] = grid[6][rows_-2][col-1];
-      grid[6][rows_-2][col-1] = tmp;
+#pragma omp parallel for schedule(static)
+    for (int col = 2; col < cols_; col++) {
+      datatype tmp = grid[8][rows_ - 1][col];
+      grid[8][rows_ - 1][col] = grid[6][rows_ - 2][col - 1];
+      grid[6][rows_ - 2][col - 1] = tmp;
     }
-
-    for (int row = 2; row< rows_-1;row++){
-      datatype tmp = grid[8][row][cols_ -1];
-      grid[8][row][cols_ -1] = grid[6][row -1][cols_-2];
-      grid[6][row -1][cols_-2] = tmp;
+#pragma omp parallel for schedule(static)
+    for (int row = 2; row < rows_ - 1; row++) {
+      datatype tmp = grid[8][row][cols_ - 1];
+      grid[8][row][cols_ - 1] = grid[6][row - 1][cols_ - 2];
+      grid[6][row - 1][cols_ - 2] = tmp;
     }
   }
-
 
   void collision_T_C02(double omega_T = 1.0, double omega_C = 1.0) {
     // T_density = grid_T_[0];
@@ -432,26 +450,27 @@ public:
     }
   }
 
-  void fast_collision(double omega = 1.0,double omega_T = 1.0,double omega_C = 1.0, datatype fan_speed = 1.0) {
-    double T_density = 0;
-    double T_eq= 0;
-
-    double C_Density = 0;
-    double C_eq= 0;
-
-    double ux = 0.0;
-    double uy = 0.0;
-    double u_ges = 0;
-    double d_u = 0;
-
-    double f_i = 0;
-    double T_i = 0;
-    double C_i = 0;
-
-    double u_val = 0;
+  void fast_collision(double omega = 1.0, double omega_T = 1.0,
+                      double omega_C = 1.0, datatype fan_speed = 1.0) {
 
 #pragma omp parallel for schedule(static)
     for (int row = 0; row < rows_; row++) {
+      double T_density = 0;
+      double T_eq = 0;
+
+      double C_Density = 0;
+      double C_eq = 0;
+
+      double ux = 0.0;
+      double uy = 0.0;
+      double u_ges = 0;
+      double d_u = 0;
+
+      double f_i = 0;
+      double T_i = 0;
+      double C_i = 0;
+
+      double u_val = 0;
       for (int col = 0; col < cols_; col++) {
 
         T_density = 0;
@@ -465,38 +484,34 @@ public:
           ux = 0;
           uy = fan_speed;
           for (int i = 0; i < 9; i++) {
-          T_density += grid_T_[i][row][col];
-          C_Density += grid_C02_[i][row][col];
-          u_val = grid_[i][row][col];
-          u_ges += u_val;
-        }
-      }
-        else{
+            T_density += grid_T_[i][row][col];
+            C_Density += grid_C02_[i][row][col];
+            u_val = grid_[i][row][col];
+            u_ges += u_val;
+          }
+        } else {
           for (int i = 0; i < 9; i++) {
-          T_density += grid_T_[i][row][col];
-          C_Density += grid_C02_[i][row][col];
-          u_val = grid_[i][row][col];
-          ux += directionVector_[i].first * u_val;
-          uy += directionVector_[i].second * u_val;
-          u_ges += u_val;
+            T_density += grid_T_[i][row][col];
+            C_Density += grid_C02_[i][row][col];
+            u_val = grid_[i][row][col];
+            ux += directionVector_[i].first * u_val;
+            uy += directionVector_[i].second * u_val;
+            u_ges += u_val;
+          }
         }
-
-        }
-        if (fabs(u_ges -0.0) > 0.0001){
+        if (fabs(u_ges - 0.0) > 0.0001) {
           ux /= u_ges;
           uy /= u_ges;
         }
-        
+
         for (int i = 0; i < 9; i++) {
 
-          d_u = directionVector_[i].first * ux+
-                directionVector_[i].second * uy;
+          d_u =
+              directionVector_[i].first * ux + directionVector_[i].second * uy;
 
-          T_eq = weights_[i] * T_density *
-                        (1.0 + 3.0 * d_u);
+          T_eq = weights_[i] * T_density * (1.0 + 3.0 * d_u);
 
-          C_eq = weights_[i] * C_Density *
-                        (1.0 + 3.0 * d_u);
+          C_eq = weights_[i] * C_Density * (1.0 + 3.0 * d_u);
 
           T_i = grid_T_[i][row][col];
           C_i = grid_C02_[i][row][col];
@@ -507,14 +522,10 @@ public:
           grid_[i][row][col] =
               f_i - omega * (f_i - weights_[i] * u_ges *
                                        (1 + 3 * (d_u) + 4.5 * (d_u * d_u) -
-                                        1.5 * (ux * ux +
-                                               uy * uy)));
-
+                                        1.5 * (ux * ux + uy * uy)));
         }
       }
     }
-
-
   }
 };
 

@@ -5,7 +5,7 @@
 
 int main() {
   datatype e = 0.1;
-  constexpr int N = 200;
+  constexpr int N = 1000;
   constexpr int ROWS = N;
   constexpr int COLS = N;
   // datatype Omega = 1.9;
@@ -18,6 +18,9 @@ int main() {
   SimGrid simGrid = SimGrid(N, N);
   simGrid.set_all_to_standard();
   simGrid.set_half_to_O1(simGrid.grid_T_);
+  simGrid.set_bc_to_0(simGrid.grid_);
+  simGrid.set_bc_to_0(simGrid.grid_T_);
+  simGrid.set_bc_to_0(simGrid.grid_C02_);
   std::vector<datatype> vec1 = {4.0 / 9.0,   1.0f / 9.0f, 1.0 / 9.0,
                                 1.0f / 9.0f, 1.0 / 9.0,   1.0 / 36.0,
                                 1.0 / 36.0,  1.0 / 36.0,  1.0 / 36.0};
@@ -26,7 +29,7 @@ int main() {
   datatype avgcollison = 0;
   datatype avgbc = 0.0;
 
-  const int count_runs = 20000;
+  const int count_runs = 2000;
 
   constexpr int WINDOW_WIDTH = 1920;
   constexpr int WINDOW_HEIGHT = 1080;
@@ -34,7 +37,7 @@ int main() {
   sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT),
                           "Heatmap");
 
-                            window.setVerticalSyncEnabled(true);
+  window.setVerticalSyncEnabled(true);
   std::vector<sf::Uint8> pixels(ROWS * COLS * 4);
   sf::Texture texture;
   texture.create(COLS, ROWS);
@@ -47,9 +50,9 @@ int main() {
   while (window.isOpen() and t < count_runs) {
     // simGrid.print_density();
     auto start_col = std::chrono::high_resolution_clock::now();
-    //simGrid.collision(Omega, Fan_Speed);
-    //simGrid.collision_T_C02(1.0, 1.0);
-    simGrid.fast_collision(Omega,Omega_T,Omega_C,Fan_Speed);   
+    // simGrid.collision(Omega, Fan_Speed);
+    // simGrid.collision_T_C02(1.0, 1.0);
+    simGrid.fast_collision(Omega, Omega_T, Omega_C, Fan_Speed);
     auto end_col = std::chrono::high_resolution_clock::now();
     std::chrono::duration<datatype, std::micro> duration = end_col - start_col;
     avgcollison += duration.count();
@@ -68,13 +71,10 @@ int main() {
     simGrid.simpleBounceBack_bc(simGrid.grid_T_);
     simGrid.simpleBounceBack_bc(simGrid.grid_C02_);
     auto end_bc = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<datatype, std::micro> duration_bc =
-        end_bc - start_bc;
+    std::chrono::duration<datatype, std::micro> duration_bc = end_bc - start_bc;
     // std::cout << "DauerStream: " << duration_step.count() << " micro s\n";
-    avgbc+= duration_bc.count();
+    avgbc += duration_bc.count();
 
-
-    
     sf::Event event;
 
     while (window.pollEvent(event)) {
@@ -82,22 +82,17 @@ int main() {
         window.close();
     }
 
-    
-
-   
     sf::Uint8 r;
     sf::Uint8 g;
     sf::Uint8 b;
     double minValue = 0.0;
     double maxValue = 2.0;
-    
+
     if (t % 200 == 0) {
       auto start_render = std::chrono::high_resolution_clock::now();
-      #pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static)
       for (int row = 0; row < ROWS; row++) {
         for (int col = 0; col < COLS; col++) {
-
-           
 
           double density = simGrid.get_density(row, col, simGrid.grid_T_);
           double normalized = (density - minValue) / (maxValue - minValue);
@@ -117,12 +112,6 @@ int main() {
           pixels[index + 3] = 250;
         }
       }
-    
-
-      
-
-    
-    
 
       window.setTitle("Heatmap t:" + std::to_string(t));
       texture.update(pixels.data());
@@ -131,11 +120,13 @@ int main() {
 
       window.draw(sprite);
       window.display();
-      
-       auto end_render = std::chrono::high_resolution_clock::now();
 
-    std::chrono::duration<datatype, std::micro> render_d = end_render - start_render;
-      //std::cout<<" Dauer Bilddarstellung: " << render_d.count() << " in micro s. \n";
+      auto end_render = std::chrono::high_resolution_clock::now();
+
+      std::chrono::duration<datatype, std::micro> render_d =
+          end_render - start_render;
+      // std::cout<<" Dauer Bilddarstellung: " << render_d.count() << " in micro
+      // s. \n";
     }
 
     // double sleep_time = 0.25 - 1e-6 * duration_step.count();
@@ -155,7 +146,7 @@ int main() {
   std::cout << "Durschnittliche Laufzeit Collision bei N = " << N << " : "
             << avgcollison << " micro s \n";
 
-            std::cout << "Durschnittliche Laufzeit Boundary bei N = " << N << " : "
+  std::cout << "Durschnittliche Laufzeit Boundary bei N = " << N << " : "
             << avgbc << " micro s \n";
   std::cout << "Durchschnittliche Gesamtlaufzeit: " << avgcollison + avgstream
             << " micro s \n";
@@ -164,5 +155,5 @@ int main() {
 
   std::cout << "Gesamtzeit: " << duration.count() << " s. \n";
   std::cout << "Anzahl Cycles: " << t << ".\n";
-  std::cout << "Zeit pro Cycle: " << duration.count() / t << " s.\n"; 
+  std::cout << "Zeit pro Cycle: " << duration.count() / t << " s.\n";
 };
