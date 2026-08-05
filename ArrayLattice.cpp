@@ -97,7 +97,7 @@ public:
     for ( int row = 1; row < rows_-1; row++){
       for (int i = 0; i < 9; i++){
         grid[i][row][0] = 0.0;
-        grid[i][row][cols_-1] = 0.0;
+        grid[i][row][cols_ -1] = 0.0;
       }
     }
   }
@@ -403,6 +403,53 @@ public:
       grid[8][row][cols_ - 1] = grid[6][row - 1][cols_ - 2];
       grid[6][row - 1][cols_ - 2] = tmp;
     }
+  }
+
+
+  void left_boundary_cond(){
+    double T = 0.8;
+    double Pressure = 0.9;
+    double C02 = 0.1;
+
+    int upper_limit = 0.55 * rows_;
+    int lower_limit = 0.80 * rows_;
+
+    for (int row = upper_limit; row < lower_limit; row++){
+      grid_[5][row -1][1] = Pressure * weights_[5];
+      grid_T_[5][row-1][1] = T * weights_[5];
+      grid_C02_[5][row-1][1] = C02 * weights_[5];
+
+      grid_[1][row][1] = Pressure * weights_[1];
+      grid_T_[1][row][1] = T * weights_[1];
+      grid_C02_[1][row][1] = C02 * weights_[1];
+
+      grid_[8][row+1][1] = Pressure* weights_[8];
+      grid_T_[8][row+1][1] = T* weights_[8];
+      grid_C02_[8][row+1][1] = C02* weights_[8];
+    }
+  }
+
+  void right_boundary_cond(){
+    double T = 1.2;
+    double Pressure = 1.1;
+    double C02 = 0.9;
+
+    int upper_limit = 0.1* rows_;
+    int lower_limit = 0.2 * rows_;
+    for (int row = upper_limit; row < lower_limit; row++){
+      grid_[6][row -1][cols_-2] = Pressure * weights_[6];
+      grid_T_[6][row-1][cols_-2] = T * weights_[6];
+      grid_C02_[6][row-1][cols_-2] = C02 * weights_[6];
+
+      grid_[2][row][cols_-2] = Pressure * weights_[2];
+      grid_T_[2][row][cols_-2] = T * weights_[2];
+      grid_C02_[2][row][cols_-2] = C02 * weights_[2];
+
+      grid_[7][row+1][cols_-2] = Pressure* weights_[7];
+      grid_T_[7][row+1][cols_-2] = T* weights_[7];
+      grid_C02_[7][row+1][cols_-2] = C02* weights_[7];
+    }
+
   }
 
   void collision_T_C02(double omega_T = 1.0, double omega_C = 1.0) {

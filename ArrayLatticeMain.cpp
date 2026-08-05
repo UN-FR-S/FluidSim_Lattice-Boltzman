@@ -5,7 +5,7 @@
 
 int main() {
   datatype e = 0.1;
-  constexpr int N = 1000;
+  constexpr int N = 400;
   constexpr int ROWS = N;
   constexpr int COLS = N;
   // datatype Omega = 1.9;
@@ -29,7 +29,7 @@ int main() {
   datatype avgcollison = 0;
   datatype avgbc = 0.0;
 
-  const int count_runs = 2000;
+  const int count_runs = 30000 ;
 
   constexpr int WINDOW_WIDTH = 1920;
   constexpr int WINDOW_HEIGHT = 1080;
@@ -70,6 +70,8 @@ int main() {
     simGrid.simpleBounceBack_bc(simGrid.grid_);
     simGrid.simpleBounceBack_bc(simGrid.grid_T_);
     simGrid.simpleBounceBack_bc(simGrid.grid_C02_);
+    simGrid.left_boundary_cond();
+    simGrid.right_boundary_cond();
     auto end_bc = std::chrono::high_resolution_clock::now();
     std::chrono::duration<datatype, std::micro> duration_bc = end_bc - start_bc;
     // std::cout << "DauerStream: " << duration_step.count() << " micro s\n";
@@ -94,7 +96,7 @@ int main() {
       for (int row = 0; row < ROWS; row++) {
         for (int col = 0; col < COLS; col++) {
 
-          double density = simGrid.get_density(row, col, simGrid.grid_T_);
+          double density = simGrid.get_density(row, col, simGrid.grid_T_ );
           double normalized = (density - minValue) / (maxValue - minValue);
           if (normalized < 0.5) {
             r = 0;
