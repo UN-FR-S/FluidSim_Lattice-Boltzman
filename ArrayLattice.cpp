@@ -25,6 +25,7 @@ public:
   std::pair<datatype, datatype> u_;
   size_t rows_;
   size_t cols_;
+  std::vector<std::vector<std::pair<datatype, datatype>>> grad_T;
   // Vector mit Threads
 
   // Delta t, equivalent to amount of iteration steps made.
@@ -46,6 +47,7 @@ public:
         fanPositions_{{10, 10}, {10, 11}, {10, 12}, {10, 13}, {10, 14},
                       {10, 15}, {10, 16}, {10, 17}, {10, 18}, {10, 19}},
         density_(r, std::vector<datatype>(c, 0.0)),
+        grad_T(r, std::vector<std::pair<datatype, datatype>>(c, {0.0, 0.0})),
         weights_{4.0 / 9.0,  1.0 / 9.0,  1.0 / 9.0,  1.0 / 9.0, 1.0 / 9.0,
                  1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0} {}
 
@@ -86,18 +88,18 @@ public:
     }
   }
 
-  void set_bc_to_0(std::vector<std::vector<std::vector<datatype>>> &grid){
-    for(int col = 0; col < cols_; col++){
-      for (int i = 0; i < 9; i++){
+  void set_bc_to_0(std::vector<std::vector<std::vector<datatype>>> &grid) {
+    for (int col = 0; col < cols_; col++) {
+      for (int i = 0; i < 9; i++) {
         grid[i][0][col] = 0.0;
-        grid[i][rows_-1][col] = 0.0;
+        grid[i][rows_ - 1][col] = 0.0;
       }
     }
 
-    for ( int row = 1; row < rows_-1; row++){
-      for (int i = 0; i < 9; i++){
+    for (int row = 1; row < rows_ - 1; row++) {
+      for (int i = 0; i < 9; i++) {
         grid[i][row][0] = 0.0;
-        grid[i][row][cols_ -1] = 0.0;
+        grid[i][row][cols_ - 1] = 0.0;
       }
     }
   }
@@ -355,21 +357,21 @@ public:
       grid[7][row][0] = grid[5][row - 1][1];
       grid[5][row - 1][1] = tmp;
     }
-    #pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static)
     for (int col = 1; col < cols_ - 2; col++) {
       datatype tmp;
       tmp = grid[7][rows_ - 1][col];
       grid[7][rows_ - 1][col] = grid[5][rows_ - 2][col + 1];
       grid[5][rows_ - 2][col + 1] = tmp;
     }
-    #pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static)
     for (int col = 2; col < cols_; col++) {
       datatype tmp;
       tmp = grid[5][0][col];
       grid[5][0][col] = grid[7][1][col - 1];
       grid[7][1][col - 1] = tmp;
     }
-    #pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static)
     for (int row = 1; row < rows_ - 2; row++) {
       datatype tmp;
       tmp = grid[5][row][cols_ - 1];
@@ -377,15 +379,15 @@ public:
       grid[7][row + 1][cols_ - 2] = tmp;
     }
 
-    // Channel 6 and 8
-    #pragma omp parallel for schedule(static)
+// Channel 6 and 8
+#pragma omp parallel for schedule(static)
     for (int col = 0; col < cols_ - 2; col++) {
       datatype tmp;
       tmp = grid[6][0][col];
       grid[6][0][col] = grid[8][1][col + 1];
       grid[8][1][col + 1] = tmp;
     }
-    #pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static)
     for (int row = 1; row < rows_ - 2; row++) {
       datatype tmp = grid[6][row][0];
       grid[6][row][0] = grid[8][row + 1][1];
@@ -405,8 +407,7 @@ public:
     }
   }
 
-
-  void left_boundary_cond(){
+  void left_boundary_cond() {
     double T = 0.8;
     double Pressure = 0.9;
     double C02 = 0.1;
@@ -414,42 +415,41 @@ public:
     int upper_limit = 0.55 * rows_;
     int lower_limit = 0.80 * rows_;
 
-    for (int row = upper_limit; row < lower_limit; row++){
-      grid_[5][row -1][1] = Pressure * weights_[5];
-      grid_T_[5][row-1][1] = T * weights_[5];
-      grid_C02_[5][row-1][1] = C02 * weights_[5];
+    for (int row = upper_limit; row < lower_limit; row++) {
+      grid_[5][row - 1][1] = Pressure * weights_[5];
+      grid_T_[5][row - 1][1] = T * weights_[5];
+      grid_C02_[5][row - 1][1] = C02 * weights_[5];
 
       grid_[1][row][1] = Pressure * weights_[1];
       grid_T_[1][row][1] = T * weights_[1];
       grid_C02_[1][row][1] = C02 * weights_[1];
 
-      grid_[8][row+1][1] = Pressure* weights_[8];
-      grid_T_[8][row+1][1] = T* weights_[8];
-      grid_C02_[8][row+1][1] = C02* weights_[8];
+      grid_[8][row + 1][1] = Pressure * weights_[8];
+      grid_T_[8][row + 1][1] = T * weights_[8];
+      grid_C02_[8][row + 1][1] = C02 * weights_[8];
     }
   }
 
-  void right_boundary_cond(){
+  void right_boundary_cond() {
     double T = 1.2;
     double Pressure = 1.1;
-    double C02 = 0.9;
+    double C02 = 0.8;
 
-    int upper_limit = 0.1* rows_;
+    int upper_limit = 0.1 * rows_;
     int lower_limit = 0.2 * rows_;
-    for (int row = upper_limit; row < lower_limit; row++){
-      grid_[6][row -1][cols_-2] = Pressure * weights_[6];
-      grid_T_[6][row-1][cols_-2] = T * weights_[6];
-      grid_C02_[6][row-1][cols_-2] = C02 * weights_[6];
+    for (int row = upper_limit; row < lower_limit; row++) {
+      grid_[6][row - 1][cols_ - 2] = Pressure * weights_[6];
+      grid_T_[6][row - 1][cols_ - 2] = T * weights_[6];
+      grid_C02_[6][row - 1][cols_ - 2] = C02 * weights_[6];
 
-      grid_[2][row][cols_-2] = Pressure * weights_[2];
-      grid_T_[2][row][cols_-2] = T * weights_[2];
-      grid_C02_[2][row][cols_-2] = C02 * weights_[2];
+      grid_[2][row][cols_ - 2] = Pressure * weights_[2];
+      grid_T_[2][row][cols_ - 2] = T * weights_[2];
+      grid_C02_[2][row][cols_ - 2] = C02 * weights_[2];
 
-      grid_[7][row+1][cols_-2] = Pressure* weights_[7];
-      grid_T_[7][row+1][cols_-2] = T* weights_[7];
-      grid_C02_[7][row+1][cols_-2] = C02* weights_[7];
+      grid_[7][row + 1][cols_ - 2] = Pressure * weights_[7];
+      grid_T_[7][row + 1][cols_ - 2] = T * weights_[7];
+      grid_C02_[7][row + 1][cols_ - 2] = C02 * weights_[7];
     }
-
   }
 
   void collision_T_C02(double omega_T = 1.0, double omega_C = 1.0) {
@@ -498,7 +498,27 @@ public:
   }
 
   void fast_collision(double omega = 1.0, double omega_T = 1.0,
-                      double omega_C = 1.0, datatype fan_speed = 1.0) {
+                      double omega_C = 1.0, datatype fan_speed = 1.0,
+                      datatype alpha = 0.01) {
+
+    // Finding Gradient T
+  #pragma omp parallel for schedule(static)
+    for (int row = 1; row < rows_ - 1; row++) {
+      double dTdx = 0.0;
+      double dTdy = 0.0;
+      double T_i;
+      for (int col = 1; col < cols_ - 1; col++) {
+        dTdx = 0.0;
+        dTdy = 0.0;
+        for (int i = 0; i < 9; i++) {
+          T_i = grid_T_[i][row + directionVector_[i].second]
+                       [col + directionVector_[i].first];
+          dTdx += weights_[i] * directionVector_[i].first * T_i;
+          dTdy += weights_[i] * directionVector_[i].second * T_i;
+        }
+        grad_T[row][col] = {3.0 * dTdx, 3.0 * dTdy};
+      }
+    }
 
 #pragma omp parallel for schedule(static)
     for (int row = 0; row < rows_; row++) {
@@ -549,6 +569,9 @@ public:
         if (fabs(u_ges - 0.0) > 0.0001) {
           ux /= u_ges;
           uy /= u_ges;
+
+          ux += alpha * grad_T[row][col].first;
+          uy += alpha * grad_T[row][col].second;
         }
 
         for (int i = 0; i < 9; i++) {
