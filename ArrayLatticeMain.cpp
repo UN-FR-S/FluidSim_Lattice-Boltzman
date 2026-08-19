@@ -2,10 +2,14 @@
 #include <SFML/Graphics.hpp>
 #include <chrono>
 #include <stdlib.h>
+#include <filesystem>
+#include <fstream>
 
 int main() {
+
+  namespace fs = std::filesystem;
   datatype e = 0.1;
-  constexpr int N = 400;
+  constexpr int N = 1000;
   constexpr int ROWS = N;
   constexpr int COLS = N;
   // datatype Omega = 1.9;
@@ -30,7 +34,7 @@ int main() {
   datatype avgcollison = 0;
   datatype avgbc = 0.0;
 
-  const int count_runs = 20000;
+  const int count_runs = 100000;
 
   constexpr int WINDOW_WIDTH = 1920;
   constexpr int WINDOW_HEIGHT = 1080;
@@ -48,6 +52,27 @@ int main() {
   sprite.setScale(static_cast<float>(WINDOW_WIDTH) / COLS,
                   static_cast<float>(WINDOW_HEIGHT) / ROWS);
   int t = 0;
+
+  // Add the Dimension and Amount of Runs for Reference 
+  std::string current_date = getCurrentDate() + "_" + std::to_string(N)+ "N" + "_" + std::to_string(count_runs) + "R" ;
+  
+  fs::path frameDir = fs::path("frames")/current_date;
+  fs::create_directories(frameDir);
+
+
+  fs::path csvFile = frameDir / "results.csv";
+  std::ofstream file(csvFile);
+  
+  file << "N," << N << "\n";
+  file << "GridSize," << N << "x" << N << "\n";
+  file << "Omega," << Omega << "\n";
+  file << "Omega_T" << Omega_T << "\n";
+  file << "Omega_C02" << Omega_C << "\n";
+  file << "FanSpeed" << Fan_Speed << "\n";
+  file << "Alpha" << alpha << "\n";
+  file << "\n";
+  file << "Step,Density,Temperature,Co2\n";
+
   while (window.isOpen() and t < count_runs) {
     // simGrid.print_density();
     auto start_col = std::chrono::high_resolution_clock::now();
@@ -119,6 +144,16 @@ int main() {
       window.setTitle("Heatmap t:" + std::to_string(t));
       texture.update(pixels.data());
 
+      sf::Image image = texture.copyToImage();
+
+      std::string frame = "frame_" + std::to_string(t) + ".png";
+      image.saveToFile(
+        frameDir/  frame);
+
+        file << t << ","
+     << simGrid.getAverage(simGrid.grid_) << ","
+     << simGrid.getAverage(simGrid.grid_T_) << ","
+     << simGrid.getAverage(simGrid.grid_C02_) << "\n";
       window.clear();
 
       window.draw(sprite);
@@ -159,4 +194,6 @@ int main() {
   std::cout << "Gesamtzeit: " << duration.count() << " s. \n";
   std::cout << "Anzahl Cycles: " << t << ".\n";
   std::cout << "Zeit pro Cycle: " << duration.count() / t << " s.\n";
+
+  file.close();
 };

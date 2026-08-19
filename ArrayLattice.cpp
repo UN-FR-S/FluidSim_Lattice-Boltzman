@@ -597,6 +597,20 @@ public:
       }
     }
   }
+
+
+  double getAverage(std::vector<std::vector<std::vector<datatype>>> &grid){
+    double average = 0;
+    for(int row= 1; row < rows_ -1; row++){
+      for ( int col = 1; col < cols_ -1; col ++){
+        for (int f = 0; f < 9; f++){
+          average += grid[f][row][col];
+        }
+      }
+    }
+    average = average /( (rows_-1)* (cols_ -1));
+    return average;
+  }
 };
 
 class HeatMap {
@@ -635,3 +649,18 @@ private:
   sf::Texture m_texture;
   sf::Sprite m_sprite;
 };
+
+
+
+std::string getCurrentDate() {
+    auto now = std::chrono::system_clock::now();
+    std::time_t time = std::chrono::system_clock::to_time_t(now);
+
+    std::tm tm{};
+    localtime_r(&time, &tm);  // Linux
+
+    std::ostringstream oss;
+    oss << std::put_time(&tm, "%Y-%m-%d_%H-%M");
+
+    return oss.str();
+}
