@@ -7,8 +7,12 @@
 #include <omp.h>
 #include <thread>
 #include <vector>
+#include <fstream>
+#include <filesystem>
 
 using datatype = double;
+namespace fs = std::filesystem;
+
 
 class SimGrid {
 public:
@@ -16,15 +20,15 @@ public:
   std::vector<std::vector<std::vector<datatype>>> grid_;
   std::vector<std::vector<std::vector<datatype>>> grid_T_;
   std::vector<std::vector<std::vector<datatype>>> grid_C02_;
-  std::vector<std::pair<int, int>> directionVector_;
+  const std::vector<std::pair<int, int>> directionVector_;
   std::vector<std::pair<int, int>> fanPositions_;
-  std::vector<datatype> weights_;
+  const std::vector<datatype> weights_;
   std::vector<std::vector<datatype>> density_;
   std::vector<std::vector<datatype>> T_density;
   std::vector<std::vector<datatype>> C02_density;
   std::pair<datatype, datatype> u_;
-  size_t rows_;
-  size_t cols_;
+  const size_t rows_;
+  const size_t cols_;
   std::vector<std::vector<std::pair<datatype, datatype>>> grad_T;
   // Vector mit Threads
 
@@ -325,7 +329,6 @@ public:
   simpleBounceBack_bc(std::vector<std::vector<std::vector<datatype>>> &grid) {
     // Channel 1 and 3
 
-#pragma omp parallel for schedule(static)
     for (int row = 0; row < rows_; row++) {
       datatype tmp;
       tmp = grid[1][row][1];
@@ -337,7 +340,7 @@ public:
       grid[3][row][cols_ - 2] = tmp;
     }
 // Channel 2 and 4
-#pragma omp parallel for schedule(static)
+
     for (int col = 0; col < cols_; col++) {
       datatype tmp;
       tmp = grid[2][0][col];
@@ -350,28 +353,28 @@ public:
     }
 
     // Channel 5 and 7:
-#pragma omp parallel for schedule(static)
+
     for (int row = 2; row < rows_; row++) {
       datatype tmp;
       tmp = grid[7][row][0];
       grid[7][row][0] = grid[5][row - 1][1];
       grid[5][row - 1][1] = tmp;
     }
-#pragma omp parallel for schedule(static)
+
     for (int col = 1; col < cols_ - 2; col++) {
       datatype tmp;
       tmp = grid[7][rows_ - 1][col];
       grid[7][rows_ - 1][col] = grid[5][rows_ - 2][col + 1];
       grid[5][rows_ - 2][col + 1] = tmp;
     }
-#pragma omp parallel for schedule(static)
+
     for (int col = 2; col < cols_; col++) {
       datatype tmp;
       tmp = grid[5][0][col];
       grid[5][0][col] = grid[7][1][col - 1];
       grid[7][1][col - 1] = tmp;
     }
-#pragma omp parallel for schedule(static)
+
     for (int row = 1; row < rows_ - 2; row++) {
       datatype tmp;
       tmp = grid[5][row][cols_ - 1];
@@ -380,26 +383,26 @@ public:
     }
 
 // Channel 6 and 8
-#pragma omp parallel for schedule(static)
+
     for (int col = 0; col < cols_ - 2; col++) {
       datatype tmp;
       tmp = grid[6][0][col];
       grid[6][0][col] = grid[8][1][col + 1];
       grid[8][1][col + 1] = tmp;
     }
-#pragma omp parallel for schedule(static)
+
     for (int row = 1; row < rows_ - 2; row++) {
       datatype tmp = grid[6][row][0];
       grid[6][row][0] = grid[8][row + 1][1];
       grid[8][row + 1][1] = tmp;
     }
-#pragma omp parallel for schedule(static)
+
     for (int col = 2; col < cols_; col++) {
       datatype tmp = grid[8][rows_ - 1][col];
       grid[8][rows_ - 1][col] = grid[6][rows_ - 2][col - 1];
       grid[6][rows_ - 2][col - 1] = tmp;
     }
-#pragma omp parallel for schedule(static)
+
     for (int row = 2; row < rows_ - 1; row++) {
       datatype tmp = grid[8][row][cols_ - 1];
       grid[8][row][cols_ - 1] = grid[6][row - 1][cols_ - 2];
@@ -507,14 +510,18 @@ public:
       double dTdx = 0.0;
       double dTdy = 0.0;
       double T_i;
+      double weight = 0;
+      std::pair<int,int> dir_vec;
       for (int col = 1; col < cols_ - 1; col++) {
         dTdx = 0.0;
         dTdy = 0.0;
         for (int i = 0; i < 9; i++) {
-          T_i = grid_T_[i][row + directionVector_[i].second]
-                       [col + directionVector_[i].first];
-          dTdx += weights_[i] * directionVector_[i].first * T_i;
-          dTdy += weights_[i] * directionVector_[i].second * T_i;
+          dir_vec = directionVector_[i];
+          T_i = grid_T_[i][row + dir_vec.second]
+                       [col + dir_vec.first];
+          weight = weights_[i];
+          dTdx += weight * dir_vec.first * T_i;
+          dTdy += weight * dir_vec.second * T_i;
         }
         grad_T[row][col] = {3.0 * dTdx, 3.0 * dTdy};
       }
@@ -663,4 +670,40 @@ std::string getCurrentDate() {
     oss << std::put_time(&tm, "%Y-%m-%d_%H-%M");
 
     return oss.str();
+}
+
+
+void save_png(SimGrid &simGrid, int t, fs::path &frameDirectory){
+  sf::Image image;
+  image.create(simGrid.cols_, simGrid.rows_);
+ 
+    double minValue = 0.0;
+    double maxValue = 1.1;
+#pragma omp parallel for schedule(static)
+      for (int row = 0; row < simGrid.rows_; row++) {
+         sf::Uint8 r;
+          sf::Uint8 g;
+          sf::Uint8 b;
+        for (int col = 0; col < simGrid.cols_; col++) {
+
+          double density = simGrid.get_density(row, col, simGrid.grid_C02_);
+          double normalized = (density - minValue) / (maxValue - minValue);
+          if (normalized < 0.5) {
+            r = 0;
+            g = static_cast<sf::Uint8>(normalized * 2 * 255);
+            b = static_cast<sf::Uint8>((1 - normalized * 2) * 255);
+          } else {
+            r = static_cast<sf::Uint8>((normalized - 0.5) * 2 * 255);
+            g = static_cast<sf::Uint8>((1 - (normalized - 0.5) * 2) * 255);
+            b = 0;
+          }
+          image.setPixel(col,row,sf::Color(r,g,b));
+
+          
+
+        }
+      }
+
+      std::string frame = "frame_" + std::to_string(t) + ".png";
+      image.saveToFile(frameDirectory / frame);
 }
