@@ -1,18 +1,17 @@
 
 #include <SFML/Graphics.hpp>
 #include <algorithm> // std::rotate
-#include <iomanip>   // Print_grid uses set_w
+#include <filesystem>
+#include <fstream>
+#include <iomanip> // Print_grid uses set_w
 #include <iostream>
 #include <math.h>
 #include <omp.h>
 #include <thread>
 #include <vector>
-#include <fstream>
-#include <filesystem>
 
 using datatype = double;
 namespace fs = std::filesystem;
-
 
 class SimGrid {
 public:
@@ -339,7 +338,7 @@ public:
       grid[1][row][cols_ - 1] = grid[3][row][cols_ - 2];
       grid[3][row][cols_ - 2] = tmp;
     }
-// Channel 2 and 4
+    // Channel 2 and 4
 
     for (int col = 0; col < cols_; col++) {
       datatype tmp;
@@ -382,7 +381,7 @@ public:
       grid[7][row + 1][cols_ - 2] = tmp;
     }
 
-// Channel 6 and 8
+    // Channel 6 and 8
 
     for (int col = 0; col < cols_ - 2; col++) {
       datatype tmp;
@@ -505,20 +504,19 @@ public:
                       datatype alpha = 0.01) {
 
     // Finding Gradient T
-  #pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static)
     for (int row = 1; row < rows_ - 1; row++) {
       double dTdx = 0.0;
       double dTdy = 0.0;
       double T_i;
       double weight = 0;
-      std::pair<int,int> dir_vec;
+      std::pair<int, int> dir_vec;
       for (int col = 1; col < cols_ - 1; col++) {
         dTdx = 0.0;
         dTdy = 0.0;
         for (int i = 0; i < 9; i++) {
           dir_vec = directionVector_[i];
-          T_i = grid_T_[i][row + dir_vec.second]
-                       [col + dir_vec.first];
+          T_i = grid_T_[i][row + dir_vec.second][col + dir_vec.first];
           weight = weights_[i];
           dTdx += weight * dir_vec.first * T_i;
           dTdy += weight * dir_vec.second * T_i;
@@ -605,17 +603,16 @@ public:
     }
   }
 
-
-  double getAverage(std::vector<std::vector<std::vector<datatype>>> &grid){
+  double getAverage(std::vector<std::vector<std::vector<datatype>>> &grid) {
     double average = 0;
-    for(int row= 1; row < rows_ -1; row++){
-      for ( int col = 1; col < cols_ -1; col ++){
-        for (int f = 0; f < 9; f++){
+    for (int row = 1; row < rows_ - 1; row++) {
+      for (int col = 1; col < cols_ - 1; col++) {
+        for (int f = 0; f < 9; f++) {
           average += grid[f][row][col];
         }
       }
     }
-    average = average /( (rows_-1)* (cols_ -1));
+    average = average / ((rows_ - 1) * (cols_ - 1));
     return average;
   }
 };
@@ -657,53 +654,47 @@ private:
   sf::Sprite m_sprite;
 };
 
-
-
 std::string getCurrentDate() {
-    auto now = std::chrono::system_clock::now();
-    std::time_t time = std::chrono::system_clock::to_time_t(now);
+  auto now = std::chrono::system_clock::now();
+  std::time_t time = std::chrono::system_clock::to_time_t(now);
 
-    std::tm tm{};
-    localtime_r(&time, &tm);  // Linux
+  std::tm tm{};
+  localtime_r(&time, &tm); // Linux
 
-    std::ostringstream oss;
-    oss << std::put_time(&tm, "%Y-%m-%d_%H-%M");
+  std::ostringstream oss;
+  oss << std::put_time(&tm, "%Y-%m-%d_%H-%M");
 
-    return oss.str();
+  return oss.str();
 }
 
-
-void save_png(SimGrid &simGrid, int t, fs::path &frameDirectory){
+void save_png(SimGrid &simGrid, int t, fs::path &frameDirectory) {
   sf::Image image;
   image.create(simGrid.cols_, simGrid.rows_);
- 
-    double minValue = 0.0;
-    double maxValue = 1.1;
+
+  double minValue = 0.0;
+  double maxValue = 1.1;
 #pragma omp parallel for schedule(static)
-      for (int row = 0; row < simGrid.rows_; row++) {
-         sf::Uint8 r;
-          sf::Uint8 g;
-          sf::Uint8 b;
-        for (int col = 0; col < simGrid.cols_; col++) {
+  for (int row = 0; row < simGrid.rows_; row++) {
+    sf::Uint8 r;
+    sf::Uint8 g;
+    sf::Uint8 b;
+    for (int col = 0; col < simGrid.cols_; col++) {
 
-          double density = simGrid.get_density(row, col, simGrid.grid_C02_);
-          double normalized = (density - minValue) / (maxValue - minValue);
-          if (normalized < 0.5) {
-            r = 0;
-            g = static_cast<sf::Uint8>(normalized * 2 * 255);
-            b = static_cast<sf::Uint8>((1 - normalized * 2) * 255);
-          } else {
-            r = static_cast<sf::Uint8>((normalized - 0.5) * 2 * 255);
-            g = static_cast<sf::Uint8>((1 - (normalized - 0.5) * 2) * 255);
-            b = 0;
-          }
-          image.setPixel(col,row,sf::Color(r,g,b));
-
-          
-
-        }
+      double density = simGrid.get_density(row, col, simGrid.grid_C02_);
+      double normalized = (density - minValue) / (maxValue - minValue);
+      if (normalized < 0.5) {
+        r = 0;
+        g = static_cast<sf::Uint8>(normalized * 2 * 255);
+        b = static_cast<sf::Uint8>((1 - normalized * 2) * 255);
+      } else {
+        r = static_cast<sf::Uint8>((normalized - 0.5) * 2 * 255);
+        g = static_cast<sf::Uint8>((1 - (normalized - 0.5) * 2) * 255);
+        b = 0;
       }
+      image.setPixel(col, row, sf::Color(r, g, b));
+    }
+  }
 
-      std::string frame = "frame_" + std::to_string(t) + ".png";
-      image.saveToFile(frameDirectory / frame);
+  std::string frame = "frame_" + std::to_string(t) + ".png";
+  image.saveToFile(frameDirectory / frame);
 }
