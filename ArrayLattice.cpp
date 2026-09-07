@@ -124,6 +124,25 @@ public:
       }
     }
   }
+
+  void set_to_gradient(std::vector<std::vector<std::vector<datatype>>> &grid){
+    datatype val = 4.0 / 9.0;
+    for (int func = 0; func < 9; func++) {
+      if (func > 0 and func <= 4) {
+        val = 1.0 / 9.0;
+      } else if (func > 4) {
+        val = 1.0 / 36.0;
+      }
+
+      for (int row = 0; row < rows_; row++) {
+        for (int col = 0; col < cols_; col++) {
+          grid[func][row][col] = row/rows_ * 0.9 + 0.1;
+        }
+      }
+    }
+  }
+
+  
   // Shifts all rows down or up based on the index. Positive is up.
   void shift_Y(int shift, size_t function,
                std::vector<std::vector<std::vector<datatype>>> &grid) {
@@ -179,93 +198,6 @@ public:
     dt++;
   }
 
-  //
-  void collision(datatype omega = 1, datatype fan_speed = 1) {
-    // density is a 2D grid of size of the grid_
-    // Add all values of f(x) to
-    density_ = grid_[0];
-    for (int f = 1; f < 9; f++) {
-      for (int row = 0; row < rows_; row++) {
-        for (int col = 0; col < cols_; col++) {
-          density_[row][col] += grid_[f][row][col];
-        }
-      }
-    }
-    // Compute f* if density is not 0
-    datatype f_i;
-    datatype u_x;
-    datatype u_y;
-    // d_u is u_ times the direction vector
-    datatype d_u;
-    for (int row = 0; row < rows_; row++) {
-      for (int col = 0; col < cols_; col++) {
-        if (density_[row][col] == 0) {
-          continue;
-        }
-
-        // If it is Ventilator
-        if (is_fan_proportional(row, col)) {
-          u_.first = 0;
-          u_.second = fan_speed;
-        } else {
-          u_x = 0;
-          u_y = 0;
-          for (int f = 0; f < 9; f++) {
-            f_i = grid_[f][row][col];
-            u_x += directionVector_[f].first * f_i;
-            u_y += directionVector_[f].second * f_i;
-          }
-          u_.first = u_x / density_[row][col];
-          u_.second = u_y / density_[row][col];
-        }
-
-        // Set every f_i to f*
-        for (int f = 0; f < 9; f++) {
-          d_u = directionVector_[f].first * u_.first +
-                directionVector_[f].second * u_.second;
-
-          // d_u = (directionvec bzw c) * u
-          //  f = w * p * (1+ 3 d_u + 9/2 d_u **2 -3/2 u**2)
-          f_i = grid_[f][row][col];
-          grid_[f][row][col] =
-              f_i - omega * (f_i - weights_[f] * density_[row][col] *
-                                       (1 + 3 * (d_u) + 4.5 * (d_u * d_u) -
-                                        1.5 * (u_.first * u_.first +
-                                               u_.second * u_.second)));
-        }
-      }
-    }
-  }
-
-  void print_grid(size_t function) {
-    for (int row = 0; row < rows_; row++) {
-      for (int col = 0; col < cols_; col++) {
-        std::cout << std::setw(7) << std::fixed << std::setprecision(2)
-                  << grid_[function][row][col];
-      }
-      std::cout << '\n';
-    }
-    std::cout << "_______________________________________\n";
-  }
-
-  void print_density() {
-    datatype density;
-    for (int row = 0; row < rows_; row++) {
-
-      for (int col = 0; col < cols_; col++) {
-        density = 0;
-        for (int i = 0; i < 9; i++) {
-          density += grid_[i][row][col];
-        }
-
-        std::cout << std::setw(7) << std::fixed << std::setprecision(2)
-                  << density;
-      }
-      std::cout << '\n';
-    }
-    std::cout << "_______________________________________\n";
-  }
-
   datatype get_density(int row, int col,
                        std::vector<std::vector<std::vector<datatype>>> &grid) {
 
@@ -295,33 +227,6 @@ public:
       return true;
     }
     return false;
-  }
-
-  // Returns steps needed to return to initial State. The State is one Point
-  // filled with 1.0
-  int run_cycle() {
-
-    // setup
-    std::vector<datatype> vec1(9, 1);
-    set_point(1, 1, vec1);
-    int timeatStart = dt;
-    int CorrectPoints = 0;
-
-    while (true) {
-      step();
-      CorrectPoints = 0;
-      for (int func = 0; func < 9; func++) {
-        if (get_point(1, 1, func) == 1) {
-          CorrectPoints++;
-        }
-      }
-      if (CorrectPoints == 9) {
-        break;
-      }
-    }
-    std::cout << "Time needed for Grid with dim =" << rows_ << " , " << cols_
-              << " is " << dt - timeatStart << ".\n";
-    return dt - timeatStart;
   }
 
   void
@@ -454,54 +359,32 @@ public:
     }
   }
 
-  void collision_T_C02(double omega_T = 1.0, double omega_C = 1.0) {
-    // T_density = grid_T_[0];
-    double T_density = 0;
-    double C_Density = 0;
-    double ux = 0.0;
-    double uy = 0.0;
-    double u_ges = 0;
-#pragma omp parallel for schedule(static)
-    for (int row = 0; row < rows_; row++) {
-      for (int col = 0; col < cols_; col++) {
+  void upper_Boundary_T() {
 
-        T_density = 0;
-        C_Density = 0;
-        ux = 0;
-        uy = 0;
+    double T = 0.1;
 
-        for (int i = 0; i < 9; i++) {
-          T_density += grid_T_[i][row][col];
-          C_Density += grid_C02_[i][row][col];
-          ux += directionVector_[i].first * grid_[i][row][col];
-          uy += directionVector_[i].second * grid_[i][row][col];
-        }
-        u_ges = get_density(row, col, grid_);
-        ux /= u_ges;
-        uy /= u_ges;
-        for (int i = 0; i < 9; i++) {
-          double T_eq = weights_[i] * T_density *
-                        (1.0 + 3.0 * directionVector_[i].first * ux +
-                         directionVector_[i].second * uy);
+    for (int col = 2; col < cols_ - 3; col++) {
+      grid_T_[7][1][col - 1] = T * weights_[7];
+      grid_T_[4][1][col] = T * weights_[4];
+      grid_T_[6][1][col + 1] = T * weights_[6];
+    }
+  }
 
-          double C_eq = weights_[i] * C_Density *
-                        (1.0 + 3.0 * directionVector_[i].first * ux +
-                         directionVector_[i].second * uy);
+  void lower_Boundary_T() {
+    double T = 1.0;
+    double U = 0.0;
 
-          double T_i = grid_T_[i][row][col];
-          double C_i = grid_C02_[i][row][col];
-
-          grid_T_[i][row][col] = grid_T_[i][row][col] - omega_T * (T_i - T_eq);
-          grid_C02_[i][row][col] = C_i - omega_C * (C_i - C_eq);
-          // std::cout<< "Row/Col" << row << "/" << col << " : " << T_i<< "\n";
-        }
-      }
+    for (int col = 2; col < cols_ - 3; col++) {
+      grid_T_[6][rows_ - 2][col - 1] = T * weights_[6];
+      grid_T_[2][rows_ - 2][col] = T * weights_[2];
+      grid_T_[5][rows_ - 2][col + 1] = T * weights_[5];
     }
   }
 
   void fast_collision(double omega = 1.0, double omega_T = 1.0,
                       double omega_C = 1.0, datatype fan_speed = 1.0,
-                      datatype alpha = 0.01) {
+                      datatype alpha = 0.01, bool fan_on = true,
+                      double beta = 0.1 ,double g = 2.509804e-05) {
 
     // Finding Gradient T
 #pragma omp parallel for schedule(static)
@@ -552,7 +435,7 @@ public:
         u_ges = 0;
         u_val = 0;
 
-        if (is_fan_proportional(row, col)) {
+        if (is_fan_proportional(row, col) and fan_on) {
           ux = 0;
           uy = fan_speed;
           for (int i = 0; i < 9; i++) {
@@ -571,16 +454,21 @@ public:
             u_ges += u_val;
           }
         }
-        if (fabs(u_ges - 0.0) > 0.0001) {
+        if (fabs(u_ges - 0.0) > 0.00001) {
           ux /= u_ges;
           uy /= u_ges;
+          double T = get_density(row,col,grid_T_);
+          //ux += alpha * grad_T[row][col].first;
+          //uy += alpha * grad_T[row][col].second;
+          // p0 Referenzdichte Luft bei 20Grad und 1Atm
+          // T_ref ist Mitte zwischen 0.1 und 1.0
+           double F_y = beta  * ( T - 0.5) / (u_ges * omega);
+           uy += F_y;
 
-          ux += alpha * grad_T[row][col].first;
-          uy += alpha * grad_T[row][col].second;
         }
 
         for (int i = 0; i < 9; i++) {
-
+          //double F_T = 3.0 * beta * weights_[i] * (get_density(row, col, grid_T_)- 0.5 ) * u_ges * directionVector_[i].second;
           d_u =
               directionVector_[i].first * ux + directionVector_[i].second * uy;
 
@@ -615,43 +503,30 @@ public:
     average = average / ((rows_ - 1) * (cols_ - 1));
     return average;
   }
-};
 
-class HeatMap {
-public:
-  HeatMap(unsigned width, unsigned height)
-      : m_width(width), m_height(height), pixels_u(width * height * 4),
-        pixels_T(width * height * 4), pixels_C(width * height * 4) {
-    m_image.create(width, height, sf::Color::Black);
-    m_texture.create(width, height);
-    m_sprite.setTexture(m_texture);
-  }
-
-  void update(SimGrid &grid) {
-    return;
-    for (int row = 0; row < grid.rows_; row++) {
-      for (int col = 0; col < grid.cols_; col++) {
-      }
+  std::pair<double, double> get_u(int row, int col) {
+    double u_val = 0.0;
+    double u_x = 0.0;
+    double u_y = 0.0;
+    double u_ges = 0.0;
+    for (int i = 0; i < 9; i++) {
+      u_val = grid_[i][row][col];
+      u_x += directionVector_[i].first * u_val;
+      u_y += directionVector_[i].second * u_val;
+      u_ges += u_val;
     }
+    if (u_ges == 0.0) {
+      std::cout << "rho = 0 at "
+                  << row << ", " << col << "\n";
+
+
+    return {0.0, 0.0};
+  }
+    u_x = u_x / u_ges;
+    u_y = u_y / u_ges;
+    return {u_x,u_y} ;
   }
 
-  void setPosition(float x, float y) { m_sprite.setPosition(x, y); }
-
-  void setScale(float sx, float sy) { m_sprite.setScale(sx, sy); }
-
-  void draw(sf::RenderWindow &window) { window.draw(m_sprite); }
-
-private:
-  unsigned m_width;
-  unsigned m_height;
-
-  std::vector<sf::Uint8> pixels_u;
-  std::vector<sf::Uint8> pixels_T;
-  std::vector<sf::Uint8> pixels_C;
-
-  sf::Image m_image;
-  sf::Texture m_texture;
-  sf::Sprite m_sprite;
 };
 
 std::string getCurrentDate() {
@@ -671,6 +546,11 @@ void save_png(SimGrid &simGrid, int t, fs::path &frameDirectory) {
   sf::Image image;
   image.create(simGrid.cols_, simGrid.rows_);
 
+  std::string quiver_adress = "Quiver_" + std::to_string(t) + ".csv";
+  fs::path csvFile = frameDirectory / quiver_adress;
+
+  std::ofstream file(csvFile);
+  file << "x" << "," << "y" << "," << "u" << "," << "v\n";
   double minValue = 0.0;
   double maxValue = 1.1;
 #pragma omp parallel for schedule(static)
@@ -680,6 +560,7 @@ void save_png(SimGrid &simGrid, int t, fs::path &frameDirectory) {
     sf::Uint8 b;
     for (int col = 0; col < simGrid.cols_; col++) {
 
+      
       double density = simGrid.get_density(row, col, simGrid.grid_C02_);
       double normalized = (density - minValue) / (maxValue - minValue);
       if (normalized < 0.5) {
@@ -695,6 +576,13 @@ void save_png(SimGrid &simGrid, int t, fs::path &frameDirectory) {
     }
   }
 
+  for (int row = 1; row < simGrid.rows_-1; row  += simGrid.rows_ / 75) {
+    for (int col = 1; col < simGrid.cols_-1; col += simGrid.cols_ / 75) {
+      std::pair<double, double> u = simGrid.get_u(row, col);
+      file << col << "," << row << "," << u.first << "," << u.second << "\n";
+    }}
+
   std::string frame = "frame_" + std::to_string(t) + ".png";
   image.saveToFile(frameDirectory / frame);
+  file.close();
 }

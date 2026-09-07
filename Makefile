@@ -5,8 +5,10 @@ LIBS = -lsfml-graphics -lsfml-window -lsfml-system
 
 # Quell- und Ziel-Dateien
 MAIN_SRC = ArrayLatticeMain.cpp
+VERT_SRC = vertSimMain.cpp
 TEST_SRC = ArrayLatticeTest.cpp
 MAIN_BIN = ArrayLatticeMain
+VERT_BIN = vertSimMain
 TEST_BIN = ArrayLatticeTest
 
 # Default-Target
@@ -14,6 +16,9 @@ all: $(MAIN_BIN)
 
 # Hauptprogramm
 $(MAIN_BIN): $(MAIN_SRC)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
+
+$(VERT_BIN): $(VERT_SRC)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 # Testprogramm
@@ -27,6 +32,9 @@ test: $(TEST_BIN)
 # Nur Hauptprogramm ausführen (nach Bedarf neu bauen)
 run: $(MAIN_BIN)
 	./$(MAIN_BIN)
+
+vert:$(VERT_BIN)
+	./$(VERT_BIN)
 
 # Checkstyle mit clang-format (nur prüfen)
 checkstyle:
