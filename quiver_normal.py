@@ -1,12 +1,15 @@
+
 import sys
 import re
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
 
 def create_quiver_plots(folder_path):
+
     folder = Path(folder_path)
 
     csv_files = sorted(
@@ -24,25 +27,32 @@ def create_quiver_plots(folder_path):
     output_folder.mkdir(exist_ok=True)
 
     # ---------------------------------------------------------
-    # Globales Maximum der vertikalen Geschwindigkeit bestimmen
+    # Globales Maximum der Pfeillänge bestimmen
     # ---------------------------------------------------------
-    max_v = 0.0
+
+    max_speed = 0.0
 
     for csv_file in csv_files:
+
         data = pd.read_csv(csv_file)
 
+        u = data["u"].to_numpy()
         v = data["v"].to_numpy()
 
-        max_v = max(
-            max_v,
-            np.max(np.abs(v))
+        # Betrag der Geschwindigkeit
+        speed = np.sqrt(u**2 + v**2)
+
+        max_speed = max(
+            max_speed,
+            np.max(speed)
         )
 
-    print(f"Maximale vertikale Geschwindigkeit: {max_v}")
+    print(f"Maximale Geschwindigkeit: {max_speed}")
 
     # ---------------------------------------------------------
     # Plots erzeugen
     # ---------------------------------------------------------
+
     for csv_file in csv_files:
 
         data = pd.read_csv(csv_file)
@@ -52,22 +62,25 @@ def create_quiver_plots(folder_path):
         u = data["u"].to_numpy()
         v = data["v"].to_numpy()
 
+        # Betrag der Geschwindigkeit für die Farbgebung
+        speed = np.sqrt(u**2 + v**2)
+
         plt.figure(figsize=(12, 8))
 
-        # Farbe wird ausschließlich durch v bestimmt
+        # Farbe wird durch die Pfeillänge bestimmt
         q = plt.quiver(
             x,
             y,
-            u,
-            v,
-            v,
-            cmap="seismic",
-            clim=(-max_v, max_v)
+            u/speed,
+            v/speed,
+            speed,
+            cmap="YlOrRd",
+            clim=(0, max_speed)
         )
 
         plt.colorbar(
             q,
-            label="Vertikale Geschwindigkeit $v$"
+            label="Geschwindigkeitsbetrag $|\\vec{u}|$"
         )
 
         plt.xlabel("x")
@@ -79,7 +92,12 @@ def create_quiver_plots(folder_path):
         plt.tight_layout()
 
         output_file = output_folder / f"{csv_file.stem}.png"
-        plt.savefig(output_file, dpi=200)
+
+        plt.savefig(
+            output_file,
+            dpi=200
+        )
+
         plt.close()
 
 
@@ -95,3 +113,4 @@ if __name__ == "__main__":
     print("Python Starts\n")
 
     create_quiver_plots(folder_path)
+

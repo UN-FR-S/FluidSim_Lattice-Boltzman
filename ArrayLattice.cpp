@@ -136,7 +136,7 @@ public:
 
       for (int row = 0; row < rows_; row++) {
         for (int col = 0; col < cols_; col++) {
-          grid[func][row][col] = row/rows_ * 0.9 + 0.1;
+          grid[func][row][col] = double(row+1) / double(rows_) * val + 0.1* val;
         }
       }
     }
@@ -316,7 +316,7 @@ public:
 
   void left_boundary_cond() {
     double T = 0.8;
-    double Pressure = 0.9;
+    double Pressure = 0.70;
     double C02 = 0.1;
 
     int upper_limit = 0.55 * rows_;
@@ -339,7 +339,7 @@ public:
 
   void right_boundary_cond() {
     double T = 1.2;
-    double Pressure = 1.1;
+    double Pressure = 1.05;
     double C02 = 0.8;
 
     int upper_limit = 0.1 * rows_;
@@ -543,8 +543,14 @@ std::string getCurrentDate() {
 }
 
 void save_png(SimGrid &simGrid, int t, fs::path &frameDirectory) {
-  sf::Image image;
-  image.create(simGrid.cols_, simGrid.rows_);
+  sf::Image image_u;
+  sf::Image image_T;
+  sf::Image image_C;
+
+
+  image_u.create(simGrid.cols_, simGrid.rows_);
+  image_T.create(simGrid.cols_, simGrid.rows_);
+  image_C.create(simGrid.cols_, simGrid.rows_);
 
   std::string quiver_adress = "Quiver_" + std::to_string(t) + ".csv";
   fs::path csvFile = frameDirectory / quiver_adress;
@@ -561,7 +567,7 @@ void save_png(SimGrid &simGrid, int t, fs::path &frameDirectory) {
     for (int col = 0; col < simGrid.cols_; col++) {
 
       
-      double density = simGrid.get_density(row, col, simGrid.grid_C02_);
+      double density = simGrid.get_density(row, col, simGrid.grid_);
       double normalized = (density - minValue) / (maxValue - minValue);
       if (normalized < 0.5) {
         r = 0;
@@ -572,17 +578,47 @@ void save_png(SimGrid &simGrid, int t, fs::path &frameDirectory) {
         g = static_cast<sf::Uint8>((1 - (normalized - 0.5) * 2) * 255);
         b = 0;
       }
-      image.setPixel(col, row, sf::Color(r, g, b));
+      image_u.setPixel(col, row, sf::Color(r, g, b));
+
+      density = simGrid.get_density(row, col, simGrid.grid_T_);
+       normalized = (density - minValue) / (maxValue - minValue);
+      if (normalized < 0.5) {
+        r = 0;
+        g = static_cast<sf::Uint8>(normalized * 2 * 255);
+        b = static_cast<sf::Uint8>((1 - normalized * 2) * 255);
+      } else {
+        r = static_cast<sf::Uint8>((normalized - 0.5) * 2 * 255);
+        g = static_cast<sf::Uint8>((1 - (normalized - 0.5) * 2) * 255);
+        b = 0;
+      }
+      image_T.setPixel(col, row, sf::Color(r, g, b));
+
+       density = simGrid.get_density(row, col, simGrid.grid_C02_);
+      normalized = (density - minValue) / (maxValue - minValue);
+      if (normalized < 0.5) {
+        r = 0;
+        g = static_cast<sf::Uint8>(normalized * 2 * 255);
+        b = static_cast<sf::Uint8>((1 - normalized * 2) * 255);
+      } else {
+        r = static_cast<sf::Uint8>((normalized - 0.5) * 2 * 255);
+        g = static_cast<sf::Uint8>((1 - (normalized - 0.5) * 2) * 255);
+        b = 0;
+      }
+      image_C.setPixel(col, row, sf::Color(r, g, b));
     }
   }
 
-  for (int row = 1; row < simGrid.rows_-1; row  += simGrid.rows_ / 75) {
-    for (int col = 1; col < simGrid.cols_-1; col += simGrid.cols_ / 75) {
+  for (int row = 1; row < simGrid.rows_-1; row  += simGrid.rows_ /40) {
+    for (int col = 1; col < simGrid.cols_-1; col += simGrid.cols_ / 40) {
       std::pair<double, double> u = simGrid.get_u(row, col);
       file << col << "," << row << "," << u.first << "," << u.second << "\n";
     }}
 
-  std::string frame = "frame_" + std::to_string(t) + ".png";
-  image.saveToFile(frameDirectory / frame);
+  std::string frame_U = "frame_U_" + std::to_string(t) + ".png";
+  std::string frame_T = "frame_T_" + std::to_string(t) + ".png";
+  std::string frame_C = "frame_CO2_" + std::to_string(t) + ".png";
+  image_u.saveToFile(frameDirectory / frame_U);
+  image_T.saveToFile(frameDirectory / frame_T);
+  image_C.saveToFile(frameDirectory / frame_C);
   file.close();
 }

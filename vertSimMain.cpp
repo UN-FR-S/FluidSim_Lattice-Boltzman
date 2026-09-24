@@ -5,15 +5,15 @@
 
 int main() {
   datatype e = 0.1;
-  constexpr int N = 400;
-  constexpr int ROWS = N;
+  constexpr int N = 600;
+  constexpr int ROWS = N; 
   constexpr int COLS = N;
 
   double Pr = 0.71;
-  double Ra = 1e7;
+  double Ra = 1e6; 
    
   double L = 4; // m
-  double dT = 20; // K
+  double dT = 5; // K 
   double v_lB = 0.04;
   double v_phys = 1.5e-5;
   double Ma = 0.05;
@@ -47,16 +47,16 @@ int main() {
 
   datatype avgstream = 0; 
   datatype avgcollison = 0;
-  datatype avgbc = 0.0;
+  datatype avgbc = 0.0; 
   datatype avgrender = 0.0;
   
-  const int count_runs = 30000;
+  const int count_runs = 600000; 
   std::cout<< "Es werden " << count_runs << " Steps berechnet für 10s. \n";
 
   int t = 0;
 
   // Add the Dimension and Amount of Runs for Reference
-  std::string current_date = getCurrentDate() + "_" + std::to_string(N) + "N" +
+  std::string current_date = getCurrentDate() + "_vert_" + std::to_string(N) + "N" + 
                              "_" + std::to_string(count_runs) + "R";
 
   fs::path frameDir = fs::path("frames") / current_date;
@@ -65,8 +65,16 @@ int main() {
   fs::path csvFile = frameDir / "results.csv";
   std::ofstream file(csvFile);
 
-  file << "N," << N << "\n";
-  file << "GridSize," << N << "x" << N << "\n";
+
+
+  file << "L, " << L << "\n";
+  file << "N, " << N << "\n";
+  file << "dt, " << dt << "\n";
+  file << "dT, " << dT << "\n";
+  file << "Ra, " << Ra << "\n";
+  file << "Pr, " << Pr << "\n";
+  file << "Ma, " << Ma << "\n";
+  file << "beta_g, " << beta_g << "\n";
   file << "Omega," << Omega << "\n";
   file << "Omega_T" << Omega_T << "\n";
   file << "Omega_C02" << Omega_C << "\n";
@@ -74,8 +82,26 @@ int main() {
   file << "Alpha" << alpha << "\n";
   file << "\n"; 
   file << "Step,Density,Temperature,Co2\n";
-
+ 
   while (t < (count_runs)) {
+    
+
+    if (t % 1000 == 0) {
+      auto start_render = std::chrono::high_resolution_clock::now();
+      save_png(simGrid, t, frameDir);
+
+      file << t << "," << simGrid.getAverage(simGrid.grid_) << ","
+           << simGrid.getAverage(simGrid.grid_T_) << ","
+           << simGrid.getAverage(simGrid.grid_C02_) << "\n";
+
+      auto end_render = std::chrono::high_resolution_clock::now();
+
+      std::chrono::duration<datatype, std::micro> render_d =
+          end_render - start_render;
+      avgrender += render_d.count();
+    }
+
+
     auto start_col = std::chrono::high_resolution_clock::now();
     simGrid.fast_collision(Omega, Omega_T, Omega_C, Fan_Speed, alpha_lB, Fan_Toggle,
                            beta_g, 0.0); 
@@ -102,21 +128,6 @@ int main() {
     std::chrono::duration<datatype, std::micro> duration_bc = end_bc - start_bc;
     avgbc += duration_bc.count();
 
-    if (t % 250 == 0) {
-      auto start_render = std::chrono::high_resolution_clock::now();
-      save_png(simGrid, t, frameDir);
-
-      file << t << "," << simGrid.getAverage(simGrid.grid_) << ","
-           << simGrid.getAverage(simGrid.grid_T_) << ","
-           << simGrid.getAverage(simGrid.grid_C02_) << "\n";
-
-      auto end_render = std::chrono::high_resolution_clock::now();
-
-      std::chrono::duration<datatype, std::micro> render_d =
-          end_render - start_render;
-      avgrender += render_d.count();
-    }
- 
     t++;
   } 
   std::string command =

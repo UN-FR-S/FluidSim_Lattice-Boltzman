@@ -34,6 +34,8 @@ run: $(MAIN_BIN)
 	./$(MAIN_BIN)
 
 vert:$(VERT_BIN)
+	
+vert_run:$(VERT_BIN)
 	./$(VERT_BIN)
 
 # Checkstyle mit clang-format (nur prüfen)
