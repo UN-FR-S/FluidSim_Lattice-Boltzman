@@ -6,6 +6,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import warnings
+
+import warnings
+
+warnings.filterwarnings("ignore")
 
 
 def create_quiver_plots(folder_path):
@@ -46,9 +51,10 @@ def create_quiver_plots(folder_path):
             max_speed,
             np.max(speed)
         )
+        
 
     print(f"Maximale Geschwindigkeit: {max_speed}")
-
+    max_speed = min(max_speed,0.20)
     # ---------------------------------------------------------
     # Plots erzeugen
     # ---------------------------------------------------------
@@ -83,20 +89,26 @@ def create_quiver_plots(folder_path):
             label="Geschwindigkeitsbetrag $|\\vec{u}|$"
         )
 
-        plt.xlabel("x")
-        plt.ylabel("y")
-        plt.title(csv_file.stem)
+        plt.xlabel("Gitterkoordinate in x Richtung")
+        plt.ylabel("Gitterkoordinate in y Richtung")
+        # name = csv_file.stem
+        # n = name[7:]
+        # plt.title(f"Geschwindigkeitsfeld $u$ mit $n$ = {n}")
 
         plt.axis("equal")
-        plt.gca().invert_yaxis()
+        ax = plt.gca()
+
+        ax.invert_yaxis()
+
+# y-Achse: Positionen bleiben gleich,
+# aber Beschriftungen werden gespiegelt
+        yticks = ax.get_yticks()
+        ax.set_yticklabels([f"{max(yticks) - y + min(yticks):g}" for y in yticks])
+
         plt.tight_layout()
 
         output_file = output_folder / f"{csv_file.stem}.png"
-
-        plt.savefig(
-            output_file,
-            dpi=200
-        )
+        plt.savefig(output_file,dpi=300)
 
         plt.close()
 

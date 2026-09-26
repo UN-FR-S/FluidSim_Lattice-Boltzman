@@ -15,7 +15,7 @@ namespace fs = std::filesystem;
 
 class SimGrid {
 public:
-  // 9D Vector containing 2D fields. In these the
+  // Vector enthalten 2D Felder der Verteilungsfunktionen.
   std::vector<std::vector<std::vector<datatype>>> grid_;
   std::vector<std::vector<std::vector<datatype>>> grid_T_;
   std::vector<std::vector<std::vector<datatype>>> grid_C02_;
@@ -209,15 +209,6 @@ public:
   }
 
   // Returns true if Position is a Fan
-  bool is_fan(int row, int col) {
-    for (int i = 0; i < fanPositions_.size(); i++) {
-      if (row == fanPositions_[i].first and col == fanPositions_[i].second) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   bool is_fan_proportional(int row, int col) {
     int mincols = cols_ * 0.20;
     int maxcols = cols_ * 0.30;
@@ -315,8 +306,8 @@ public:
   }
 
   void left_boundary_cond() {
-    double T = 0.8;
-    double Pressure = 0.70;
+    double T = 0.2;
+    double Pressure = 0.90;
     double C02 = 0.1;
 
     int upper_limit = 0.55 * rows_;
@@ -338,12 +329,12 @@ public:
   }
 
   void right_boundary_cond() {
-    double T = 1.2;
-    double Pressure = 1.05;
+    double T = 1.0;
+    double Pressure = 1.1;
     double C02 = 0.8;
 
-    int upper_limit = 0.1 * rows_;
-    int lower_limit = 0.2 * rows_;
+    int upper_limit = 0.05 * rows_;
+    int lower_limit = 0.3 * rows_;
     for (int row = upper_limit; row < lower_limit; row++) {
       grid_[6][row - 1][cols_ - 2] = Pressure * weights_[6];
       grid_T_[6][row - 1][cols_ - 2] = T * weights_[6];

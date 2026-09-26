@@ -5,42 +5,58 @@
 
 int main() {
   datatype e = 0.1;
-  constexpr int N = 300;
+  constexpr int N = 100;
   constexpr int ROWS = N; 
   constexpr int COLS = N;
 
   double Pr = 0.71;
-  double Ra = 1e6; 
+  double Sc = 0.95;
+  
    
-  double L = 4; // m
-  double dT = 5; // K 
-  double v_lB = 0.04;
+  double L = 0.36; // m
+  double dT = 5;
+  double u_phys = 0.06; // K 
+  double u_LB = 0.1;
+  
   double v_phys = 1.5e-5;
+
   double Ma = 0.05;
   double us = 0.577350269;  
 
+  double Re = u_phys * L / v_phys;
+
+  double v_lB = u_LB * N / Re;
+
+  
+
   double alpha_lB  = v_lB/ Pr;
+  double D_C = v_lB / Sc;
 
   double Omega = 1.0 / (v_lB* 3.0 + 0.5); 
   double Omega_T = 1.0 / (alpha_lB * 3.0 + 0.5);
+  double Omega_C = 1.0 /(D_C * 3.0 + 0.5);
 
-  double beta_g = Ra * v_lB * alpha_lB / (1 * N * N *N ) *0.0 ;
+  double beta_g = Re * v_lB * alpha_lB / (1 * N * N *N ) *0.0 ;
 
-  double dt = Ma * L / ( N * std::sqrt(Ra * v_phys* v_phys / Pr));
+  double dx = L / N;
+  double dt = u_LB*dx  / u_phys;
 
-  std::cout<<"Omega_U und OmegaT sind " << Omega << " / " << Omega_T << "  ## \n";
+
+  std::cout<<"v_LB = " << v_lB << " \n";
+  std::cout << "Re = " << Re << "\n";
+  std::cout<<"Omega_U, OmegaT und OmegaC sind " << Omega << " / " << Omega_T << " / " << Omega_C << "  ## \n";
   std::cout<<"Beta-g ist " << beta_g << " ## \n";
 
   auto full_time = std::chrono::high_resolution_clock::now();
-  datatype Omega_C = 1.0;
-  datatype Fan_Speed = 0.02;
+
+  datatype Fan_Speed = u_LB;
   datatype alpha =  4.470750e-02;
-  const bool Fan_Toggle = true; 
+  const bool Fan_Toggle = true;  
 
   SimGrid simGrid = SimGrid(N, N);
   simGrid.set_all_to_standard();
-  //simGrid.set_to_gradient(simGrid.grid_T_);
-  //simGrid.set_half_to_O1(simGrid.grid_C02_);
+  simGrid.set_to_gradient(simGrid.grid_T_);
+  simGrid.set_half_to_O1(simGrid.grid_C02_);
   simGrid.set_bc_to_0(simGrid.grid_); 
   simGrid.set_bc_to_0(simGrid.grid_T_);
   simGrid.set_bc_to_0(simGrid.grid_C02_);
@@ -50,8 +66,8 @@ int main() {
   datatype avgbc = 0.0;
   datatype avgrender = 0.0;
   
-  const int count_runs = 50000; 
-  std::cout<< "Es werden " << count_runs << " Steps berechnet für 10s. \n";
+  const int count_runs = static_cast<int>(std::round(60.0 / dt));
+  std::cout<< "Es werden " << count_runs << " Steps berechnet für "<< static_cast<int>(std::round(double(count_runs) * dt)) <<"s. \n";
 
   int t = 0;
 
@@ -71,7 +87,7 @@ int main() {
   file << "N, " << N << "\n"; 
   file << "dt, " << dt << "\n";
   file << "dT, " << dT << "\n"; 
-  file << "Ra, " << Ra << "\n";
+  file << "Re, " << Re << "\n";
   file << "Pr, " << Pr << "\n";
   file << "Ma, " << Ma << "\n";
   file << "beta_g, " << beta_g << "\n";
@@ -86,18 +102,14 @@ int main() {
   while (t < (count_runs)) {
     
 
-    if (t % 1000 == 0) {
+    if (t % 500 == 0) {
       auto start_render = std::chrono::high_resolution_clock::now();
-      //save_png(simGrid, t, frameDir);
+      save_png(simGrid, t, frameDir);
 
       file << t << "," << simGrid.getAverage(simGrid.grid_) << ","
            << simGrid.getAverage(simGrid.grid_T_) << ","
            << simGrid.getAverage(simGrid.grid_C02_) << "\n";
-      double progress = 100.0 * t / count_runs;
 
-      std::cout << "\rFortschritt: "
-          << progress << "%"
-          << std::flush;
 
 
       auto end_render = std::chrono::high_resolution_clock::now();
@@ -128,8 +140,8 @@ int main() {
     simGrid.simpleBounceBack_bc(simGrid.grid_C02_);
     //simGrid.lower_Boundary_T();
     //simGrid.upper_Boundary_T();
-    //simGrid.left_boundary_cond();
-    //simGrid.right_boundary_cond();
+    simGrid.left_boundary_cond();
+    simGrid.right_boundary_cond();
     auto end_bc = std::chrono::high_resolution_clock::now();
     std::chrono::duration<datatype, std::micro> duration_bc = end_bc - start_bc;
     avgbc += duration_bc.count();
@@ -139,7 +151,7 @@ int main() {
   std::string command =
     "conda run -n FluidEnv python quiver_normal.py \"" +
   frameDir.string() + "\"";
-  //std::system(command.c_str());
+  std::system(command.c_str());
  
 
   auto end_time = std::chrono::high_resolution_clock::now();
